@@ -1,28 +1,17 @@
-private void SynchronizeDataGrids(DataGridView sprItems, DataGridView sprSaved)
-{
-    // Clear existing rows in sprSaved
-    sprSaved.Rows.Clear();
-
-    // Clone columns from sprItems to sprSaved if necessary
-    CloneColumns(sprItems, sprSaved);
-
-    // Copy rows from sprItems to sprSaved
-    CopyRows(sprItems, sprSaved);
-}
-private void CopyRows(DataGridView source, DataGridView destination)
-{
-    foreach (DataGridViewRow sourceRow in source.Rows)
-    {
-        if (!sourceRow.IsNewRow)
-        {
-            DataGridViewRow newRow = (DataGridViewRow)sourceRow.Clone();
-            for (int i = 0; i < sourceRow.Cells.Count; i++)
-            {
-                newRow.Cells[i].Value = sourceRow.Cells[i].Value;
-            }
-            destination.Rows.Add(newRow);
-        }
-    }
-}
-
-
+update specs_tracking set 
+	status = 50, 
+	bid = 14499, 
+	vendor = 209, 
+	tax_code = '1', 
+	purchase_group = 17148, 
+	purchase_order = '3210117631', 
+	purchase_group_item = ob.purchase_group_item, 
+	purchase_order_item = ob.purchase_group_item, 
+	est_production_date = '3/20/2025 12:00:00 AM', 
+	new_partial_date = Null, 
+	new_production_date = '3/20/2025 12:00:00 AM', 
+	engineer = 'SQGD'
+from #order_batch ob, specs_tracking sn 
+where ob.spec_serial = sn.spec_serial 
+   and sn.status <> 99 and sn.eng_year = 2025	
+   and ob.group_no = 1 
