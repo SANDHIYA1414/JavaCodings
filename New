@@ -1,2 +1,37 @@
-The UPDATE statement conflicted with the CHECK constraint "CK_tax_code". The conflict occurred in database "Engineering", table "dbo.specs_tracking", column 'tax_code'.
-The statement has been terminated.
+int tempRefParam13 = 0;
+			int tempRefParam14 = 11;
+			mdlUtil_STD.SetStatus(ref tempRefParam13, "Saving, PO: " + sPGrp + "   " + sPONO + ". Adding po_items records...", ref tempRefParam14);
+
+			//*** INSERT PO_LINE_ITEMS ***
+			SPR = frmPOLineItems.DefInstance.sprItems;
+			object tempForEndVar = ((dynamic) SPR).MaxRows;
+			for (iRow = 1; iRow <= Convert.ToDouble(tempForEndVar); iRow++)
+			{ //SPR is the frmPOLineItems.sprItems Sread sheet the user edited (now invisible)
+			  //sAmt = SPREAD.sSprText((UpgradeHelpers.Spread.FpSpread) SPR, 2, iRow);//soca
+				mdlUtil_STD.glRes = mdlUtil_STD.iReplaceStr(ref sAmt, "$", "");
+				mdlUtil_STD.glRes = mdlUtil_STD.iReplaceStr(ref sAmt, ",", "");
+				//sItemType = SPREAD.sSprText((UpgradeHelpers.Spread.FpSpread) SPR, 4, iRow);//soca
+				mdlUtil_ADO.sql = "";
+				if (Conversion.Val(sAmt) != 0)
+				{ //no price means no entry for this item
+					mdlUtil_ADO.sql = "insert into po_items ";
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "request", "", "sn.request");
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "step", "", "sn.step");
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "po_no", "", "sn.purchase_order");
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "line_item_no", "", "sn.purchase_group_item + " + sItemType);
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "item_type", "", sItemType);
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "amount", "$", sAmt);
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "change_descr", mdlUtil_STD.HQ, "");
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "entry_date", "", "getdate()");
+					mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "insert_complete", "", "1");
+					// mav 5/2/97 - don't need with request_updates            BuildInsert gsTmp, "insert_complete", "", "0"
+					mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "from #order_batch ob, specs_tracking sn ");
+					mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "where ob.spec_serial = sn.spec_serial ");
+					mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "   and sn.eng_year = " + mdlApplication.gsEngYear + " and ob.group_no = 1 ");
+
+					if (mdlUtil_ADO.iSQL_DO(mdlUtil_ADO.goConn, mdlUtil_ADO.sql) == mdlUtil_ADO.FAIL)
+					{
+						goto SAVE_NEW_ORDERS_FAILED;
+					}
+				}
+			}
