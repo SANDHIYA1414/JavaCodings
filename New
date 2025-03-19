@@ -1,17 +1,2 @@
-update specs_tracking set 
-	status = 50, 
-	bid = 14499, 
-	vendor = 209, 
-	tax_code = '1', 
-	purchase_group = 17148, 
-	purchase_order = '3210117631', 
-	purchase_group_item = ob.purchase_group_item, 
-	purchase_order_item = ob.purchase_group_item, 
-	est_production_date = '3/20/2025 12:00:00 AM', 
-	new_partial_date = Null, 
-	new_production_date = '3/20/2025 12:00:00 AM', 
-	engineer = 'SQGD'
-from #order_batch ob, specs_tracking sn 
-where ob.spec_serial = sn.spec_serial 
-   and sn.status <> 99 and sn.eng_year = 2025	
-   and ob.group_no = 1 
+The UPDATE statement conflicted with the CHECK constraint "CK_tax_code". The conflict occurred in database "Engineering", table "dbo.specs_tracking", column 'tax_code'.
+The statement has been terminated.
