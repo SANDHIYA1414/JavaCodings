@@ -1,0 +1,28 @@
+private void SynchronizeDataGrids(DataGridView sprItems, DataGridView sprSaved)
+{
+    // Clear existing rows in sprSaved
+    sprSaved.Rows.Clear();
+
+    // Clone columns from sprItems to sprSaved if necessary
+    CloneColumns(sprItems, sprSaved);
+
+    // Copy rows from sprItems to sprSaved
+    CopyRows(sprItems, sprSaved);
+}
+private void CopyRows(DataGridView source, DataGridView destination)
+{
+    foreach (DataGridViewRow sourceRow in source.Rows)
+    {
+        if (!sourceRow.IsNewRow)
+        {
+            DataGridViewRow newRow = (DataGridViewRow)sourceRow.Clone();
+            for (int i = 0; i < sourceRow.Cells.Count; i++)
+            {
+                newRow.Cells[i].Value = sourceRow.Cells[i].Value;
+            }
+            destination.Rows.Add(newRow);
+        }
+    }
+}
+
+
