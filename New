@@ -1,14 +1,15 @@
-            sql = "insert into po_items "
-            BuildInsert sql, "request", "", "sn.request"
-            BuildInsert sql, "step", "", "sn.step"
-            BuildInsert sql, "po_no", "", "sn.purchase_order"
-            BuildInsert sql, "line_item_no", "", "sn.purchase_group_item + " & sItemType
-            BuildInsert sql, "item_type", "", sItemType
-            BuildInsert sql, "amount", "$", sAmt
-            BuildInsert sql, "change_descr", HQ, ""
-            BuildInsert sql, "entry_date", "", "getdate()"
-            BuildInsert sql, "insert_complete", "", "1"
-' mav 5/2/97 - don't need with request_updates            BuildInsert gsTmp, "insert_complete", "", "0"
-            bs sql, "from #order_batch ob, specs_tracking sn "
-            bs sql, "where ob.spec_serial = sn.spec_serial "
-            bs sql, "   and sn.eng_year = " & gsEngYear & " and ob.group_no = 1 "
+string sql = "insert into po_items ";
+BuildInsert(ref sql, "request", "", "sn.request");
+BuildInsert(ref sql, "step", "", "sn.step");
+BuildInsert(ref sql, "po_no", "", "sn.purchase_order");
+BuildInsert(ref sql, "line_item_no", "", "sn.purchase_group_item + " + sItemType);
+BuildInsert(ref sql, "item_type", "", sItemType);
+BuildInsert(ref sql, "amount", "$", sAmt);
+BuildInsert(ref sql, "change_descr", HQ, "");
+BuildInsert(ref sql, "entry_date", "", "getdate()");
+BuildInsert(ref sql, "insert_complete", "", "1");
+// mav 5/2/97 - don't need with request_updates
+// BuildInsert(ref gsTmp, "insert_complete", "", "0");
+bs(ref sql, "from #order_batch ob, specs_tracking sn ");
+bs(ref sql, "where ob.spec_serial = sn.spec_serial ");
+bs(ref sql, "   and sn.eng_year = " + gsEngYear + " and ob.group_no = 1 ");
