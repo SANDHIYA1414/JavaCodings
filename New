@@ -1,15 +1,14 @@
-string sql = "insert into po_items ";
-BuildInsert(ref sql, "request", "", "sn.request");
-BuildInsert(ref sql, "step", "", "sn.step");
-BuildInsert(ref sql, "po_no", "", "sn.purchase_order");
-BuildInsert(ref sql, "line_item_no", "", "sn.purchase_group_item + " + sItemType);
-BuildInsert(ref sql, "item_type", "", sItemType);
-BuildInsert(ref sql, "amount", "$", sAmt);
-BuildInsert(ref sql, "change_descr", HQ, "");
-BuildInsert(ref sql, "entry_date", "", "getdate()");
-BuildInsert(ref sql, "insert_complete", "", "1");
-// mav 5/2/97 - don't need with request_updates
-// BuildInsert(ref gsTmp, "insert_complete", "", "0");
-bs(ref sql, "from #order_batch ob, specs_tracking sn ");
-bs(ref sql, "where ob.spec_serial = sn.spec_serial ");
-bs(ref sql, "   and sn.eng_year = " + gsEngYear + " and ob.group_no = 1 ");
+insert into po_items  (request, step, po_no, line_item_no, item_type, amount, change_descr, entry_date, insert_complete) 
+select
+	sn.request /* request */ , 
+	sn.step /* step */ , 
+	sn.purchase_order /* po_no */ , 
+	sn.purchase_group_item + /* line_item_no */ , 
+	 /* item_type */ , 
+	convert(money, '3.00') /* amount */ , 
+	'' /* change_descr */ , 
+	getdate() /* entry_date */ , 
+	1 /* insert_complete */ 
+from #order_batch ob, specs_tracking sn 
+where ob.spec_serial = sn.spec_serial 
+   and sn.eng_year = 2025	 and ob.group_no = 1 
