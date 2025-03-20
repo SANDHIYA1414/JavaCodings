@@ -1,14 +1,107 @@
+string sql = "insert into po_items ";
+					mdlUtil_ADO.BuildInsert(ref sql, "request", "", "sn.request");
+					mdlUtil_ADO.BuildInsert(ref sql, "step", "", "sn.step");
+					mdlUtil_ADO.BuildInsert(ref sql, "po_no", "", "sn.purchase_order");
+					mdlUtil_ADO.BuildInsert(ref sql, "line_item_no", "", "sn.purchase_group_item  " + sItemType);
+					mdlUtil_ADO.BuildInsert(ref sql, "item_type", "", sItemType);
+					mdlUtil_ADO.BuildInsert(ref sql, "amount", "$", sAmt);
+					mdlUtil_ADO.BuildInsert(ref sql, "change_descr", mdlUtil_STD.HQ, "");
+					mdlUtil_ADO.BuildInsert(ref sql, "entry_date", "", "getdate()");
+					mdlUtil_ADO.BuildInsert(ref sql, "insert_complete", "", "1");
+					// mav 5/2/97 - don't need with request_updates
+					// BuildInsert(ref gsTmp, "insert_complete", "", "0");
+					mdlUtil_STD.bs(ref sql, "from #order_batch ob, specs_tracking sn ");
+					mdlUtil_STD.bs(ref sql, "where ob.spec_serial = sn.spec_serial ");
+					mdlUtil_STD.bs(ref sql, "   and sn.eng_year = " + mdlApplication.gsEngYear + " and ob.group_no = 1 ");
+
+
+
+internal static void BuildInsert(ref string sSQL, string sField, string sDelimAndBlankOpt, string sValue)
+		{
+
+			if (Strings.Len(sSQL) == 0)
+			{
+				sSQL = " () " + mdlUtil_STD.NL + "select";
+			}
+			int iNextPos = (sSQL.IndexOf(')') + 1); //pos for next field to be inserted
+			if (iNextPos == 0)
+			{ //this is the typical way to begin a new Build insert
+				sSQL = sSQL + " () " + mdlUtil_STD.NL + "select";
+				iNextPos = (sSQL.IndexOf(')') + 1);
+			}
+			//NOW INSERT THE NEXT FIELD NAME
+			if (sSQL.Substring(iNextPos - 2, Math.Min(1, sSQL.Length - (iNextPos - 2))) == "(")
+			{
+				sSQL = sSQL.Substring(0, Math.Min(iNextPos - 1, sSQL.Length)) + sField + sSQL.Substring(iNextPos - 1);
+			}
+			else
+			{
+				sSQL = sSQL.Substring(0, Math.Min(iNextPos - 1, sSQL.Length)) + ", " + sField + sSQL.Substring(iNextPos - 1);
+			}
+			string switchVar = sDelimAndBlankOpt.ToUpper();
+			if (switchVar == mdlUtil_STD.QT || switchVar == mdlUtil_STD.HQ)
+			{ //standard string - trim the value
+				sValue = mdlUtil_STD.sQT(sValue);
+			}
+			else if (switchVar == "QTNULL")
+			{  //standard string, but pass Null iF Blank
+				if (sValue.Trim() == "")
+				{
+					sValue = "Null";
+				}
+				else
+				{
+					sValue = mdlUtil_STD.sQT(sValue);
+				}
+			}
+			else if (switchVar == "NULL")
+			{  // standard numeric - null if blank
+				if (sValue == "")
+				{
+					sValue = "NULL";
+				}
+			}
+			else if (switchVar == "0" || switchVar == "ZERO")
+			{  // numeric - use val() of string
+				if (Conversion.Val(sValue) == 0)
+				{
+					sValue = "0";
+				}
+			}
+			else if (switchVar == "$")
+			{  // money - use convert(money, value)
+				sValue = "convert(money, " + mdlUtil_STD.sQT(sValue) + ")";
+			}
+			if (sSQL.Substring(Math.Max(sSQL.Length - 6, 0)) == "select")
+			{
+				sSQL = sSQL + mdlUtil_STD.NL + mdlUtil_STD.TB + sValue.Trim();
+			}
+			else
+			{
+				//MAV 10/16/1998 - Modified to eliminate need for static sLastField
+				sSQL = sSQL + ", " + mdlUtil_STD.NL + mdlUtil_STD.TB + sValue.Trim();
+			}
+			sSQL = sSQL + " /* " + sField + " */ "; //put FIELD NAME in comments on same line as the value...
+
+
+
+		}
+
+
 insert into po_items  (request, step, po_no, line_item_no, item_type, amount, change_descr, entry_date, insert_complete) 
 select
 	sn.request /* request */ , 
 	sn.step /* step */ , 
 	sn.purchase_order /* po_no */ , 
-	sn.purchase_group_item + /* line_item_no */ , 
-	 /* item_type */ , 
+	sn.purchase_group_item /* line_item_no */ ,
+	 /* item_type */  
 	convert(money, '3.00') /* amount */ , 
 	'' /* change_descr */ , 
 	getdate() /* entry_date */ , 
 	1 /* insert_complete */ 
-from #order_batch ob, specs_tracking sn 
+from #order_batch ob, specs_tracking sn
 where ob.spec_serial = sn.spec_serial 
    and sn.eng_year = 2025	 and ob.group_no = 1 
+
+Error iam getting while running sql :The select list for the INSERT statement contains fewer items than the insert list. The number of SELECT values must match the number of INSERT columns.
+
