@@ -1,16 +1,33 @@
-string sql = @"
-INSERT INTO po_items (request, step, po_no, line_item_no, item_type, amount, change_descr, entry_date, insert_complete)
-SELECT
-    sn.request,
-    sn.step,
-    sn.purchase_order,
-    sn.purchase_group_item + " + sItemType + @",
-    " + sItemType + @",
-    CONVERT(money, " + sAmt + @"),
-    '" + mdlUtil_STD.HQ + @"',
-    GETDATE(),
-    1
-FROM #order_batch ob
-INNER JOIN specs_tracking sn ON ob.spec_serial = sn.spec_serial
-WHERE sn.eng_year = " + mdlApplication.gsEngYear + @"
-AND ob.group_no = 1;";
+insert into po_items  (request, step, po_no, line_item_no, item_type, amount, change_descr, entry_date, insert_complete) 
+select
+	sn.request /* request */ , 
+	sn.step /* step */ , 
+	sn.purchase_order /* po_no */ , 
+	sn.purchase_group_item + /* line_item_no */,
+	 /* item_type */ ,
+	convert(money, '3.00') /* amount */ , 
+	'' /* change_descr */ , 
+	getdate() /* entry_date */ , 
+	1 /* insert_complete */ 
+from #order_batch ob, specs_tracking sn 
+where ob.spec_serial = sn.spec_serial 
+   and sn.eng_year = 2025	 and ob.group_no = 1 
+
+
+
+
+
+   mdlUtil_ADO.sql = "insert into po_items ";
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "request", "", "sn.request");
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "step", "", "sn.step");
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "po_no", "", "sn.purchase_order");
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "line_item_no", "", "sn.purchase_group_item +" + sItemType);
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "item_type", "", sItemType);
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "amount", "$", sAmt);
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "change_descr", mdlUtil_STD.HQ, "");
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "entry_date", "", "getdate()");
+                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "insert_complete", "", "1");
+                    // mav 5/2/97 - don't need with request_updates            BuildInsert gsTmp, "insert_complete", "", "0"
+                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "from #order_batch ob, specs_tracking sn ");
+                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "where ob.spec_serial = sn.spec_serial ");
+                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "   and sn.eng_year = " + mdlApplication.gsEngYear + " and ob.group_no = 1 ");
