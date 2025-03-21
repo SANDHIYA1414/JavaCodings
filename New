@@ -1,33 +1,60 @@
-insert into po_items  (request, step, po_no, line_item_no, item_type, amount, change_descr, entry_date, insert_complete) 
-select
-	sn.request /* request */ , 
-	sn.step /* step */ , 
-	sn.purchase_order /* po_no */ , 
-	sn.purchase_group_item + /* line_item_no */,
-	 /* item_type */ ,
-	convert(money, '3.00') /* amount */ , 
-	'' /* change_descr */ , 
-	getdate() /* entry_date */ , 
-	1 /* insert_complete */ 
-from #order_batch ob, specs_tracking sn 
-where ob.spec_serial = sn.spec_serial 
-   and sn.eng_year = 2025	 and ob.group_no = 1 
+cmdRefresh.Refresh();
+					cmdSaveSelected.Refresh();
+					cmdSaveGroup.Refresh();
+					cmdClear.Refresh();
+					cmdClose.Refresh();
+					sprSpecs.Refresh();
+					grdVendors.Refresh();
+
+					//UPGRADE_TODO: (1069) Error handling statement (On Error Resume Next) was converted to a pattern that might have a different behavior. More Information: https://docs.mobilize.net/vbuc/ewis#1069
+					try
+					{ //2017-02-16 Added error recovery
+						mdlUtil_ADO.goConn.Close(); // 2016-06-14 - Added Connection Close and Re-Open to solve "single record" cursor issue only the first record is returned the oSet.EOF is raised otherwise...
+						//UPGRADE_TODO: (7010) The connection string must be verified to fullfill the .NET data provider connection string requirements. More Information: https://docs.mobilize.net/vbuc/ewis#7010
+						mdlUtil_ADO.goConn.ConnectionString = mdlUtil_ADO.gsConnection;
+						mdlUtil_ADO.goConn.Open();
+					}
+					catch (Exception ex)
+					{
+						log.Error("An Error has occured", ex);
+						NotUpgradedHelper.NotifyNotUpgradedElement("Resume in On-Error-Resume-Next Block");
+					}
 
 
+					mdlUtil_ADO.LogSQL(sPONO + " SAVED" + Environment.NewLine + msMsg, true); // Write result to FILE THEN Close Log (so cached write is saved.)
+
+					tempRefParam25 = -1;
+					tempRefParam26 = 11;
+					mdlUtil_STD.SetStatus(ref tempRefParam25, "EOS PO " + sPONO + " CREATED. Printing DOCS to PDF - Do not Interupt printing...", ref tempRefParam26);
+					sPONO = sPONO.Trim();//sqgdmar20
+										 // 2016-04-24 Print all PO related Documents as PDFs
+					frmOrderPrint.DefInstance.ShowDialog();
+					mdlUtil_STD.glRes = (frmOrderPrint.DefInstance.bPrintForPurchasing(sPONO)) ? -1 : 0;//soca
+
+					if ((mdlUtil_STD.bIsKeyDown(Keys.ShiftKey) | mdlUtil_STD.bIsKeyDown(Keys.ControlKey)) != 0)
+					{
+						mdlUtil_STD.gsTmp = mdlUtil_STD.sGetInput("Copy Opportunity", "Shift or Control pressed for copy opportunity.", msMsg);
+					}
+
+					cmdRefresh.Refresh();
+					cmdSaveSelected.Refresh();
+					cmdSaveGroup.Refresh();
+					cmdClear.Refresh();
+					cmdClose.Refresh();
+					sprSpecs.Refresh();
+					grdVendors.Refresh();
+
+					this.Cursor = CursorHelper.CursorDefault;
 
 
+					return;
 
-   mdlUtil_ADO.sql = "insert into po_items ";
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "request", "", "sn.request");
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "step", "", "sn.step");
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "po_no", "", "sn.purchase_order");
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "line_item_no", "", "sn.purchase_group_item +" + sItemType);
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "item_type", "", sItemType);
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "amount", "$", sAmt);
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "change_descr", mdlUtil_STD.HQ, "");
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "entry_date", "", "getdate()");
-                    mdlUtil_ADO.BuildInsert(ref mdlUtil_ADO.sql, "insert_complete", "", "1");
-                    // mav 5/2/97 - don't need with request_updates            BuildInsert gsTmp, "insert_complete", "", "0"
-                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "from #order_batch ob, specs_tracking sn ");
-                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "where ob.spec_serial = sn.spec_serial ");
-                    mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "   and sn.eng_year = " + mdlApplication.gsEngYear + " and ob.group_no = 1 ");
+				}
+			}
+			SAVE_NEW_ORDERS_FAILED:
+
+
+			this.Cursor = CursorHelper.CursorDefault;
+
+			int tempRefParam27 = -1;
+			int tempRefParam28 = 11;
