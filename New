@@ -1,60 +1,90 @@
-cmdRefresh.Refresh();
-					cmdSaveSelected.Refresh();
-					cmdSaveGroup.Refresh();
-					cmdClear.Refresh();
-					cmdClose.Refresh();
-					sprSpecs.Refresh();
-					grdVendors.Refresh();
-
-					//UPGRADE_TODO: (1069) Error handling statement (On Error Resume Next) was converted to a pattern that might have a different behavior. More Information: https://docs.mobilize.net/vbuc/ewis#1069
-					try
-					{ //2017-02-16 Added error recovery
-						mdlUtil_ADO.goConn.Close(); // 2016-06-14 - Added Connection Close and Re-Open to solve "single record" cursor issue only the first record is returned the oSet.EOF is raised otherwise...
-						//UPGRADE_TODO: (7010) The connection string must be verified to fullfill the .NET data provider connection string requirements. More Information: https://docs.mobilize.net/vbuc/ewis#7010
-						mdlUtil_ADO.goConn.ConnectionString = mdlUtil_ADO.gsConnection;
-						mdlUtil_ADO.goConn.Open();
-					}
-					catch (Exception ex)
-					{
-						log.Error("An Error has occured", ex);
-						NotUpgradedHelper.NotifyNotUpgradedElement("Resume in On-Error-Resume-Next Block");
-					}
+public void mnuHAUpdate_Click(Object eventSender, EventArgs eventArgs)
+		{
+			ADMIN.EditAdmin(Path.GetFileNameWithoutExtension(Application.ExecutablePath));
+		}
 
 
-					mdlUtil_ADO.LogSQL(sPONO + " SAVED" + Environment.NewLine + msMsg, true); // Write result to FILE THEN Close Log (so cached write is saved.)
-
-					tempRefParam25 = -1;
-					tempRefParam26 = 11;
-					mdlUtil_STD.SetStatus(ref tempRefParam25, "EOS PO " + sPONO + " CREATED. Printing DOCS to PDF - Do not Interupt printing...", ref tempRefParam26);
-					sPONO = sPONO.Trim();//sqgdmar20
-										 // 2016-04-24 Print all PO related Documents as PDFs
-					frmOrderPrint.DefInstance.ShowDialog();
-					mdlUtil_STD.glRes = (frmOrderPrint.DefInstance.bPrintForPurchasing(sPONO)) ? -1 : 0;//soca
-
-					if ((mdlUtil_STD.bIsKeyDown(Keys.ShiftKey) | mdlUtil_STD.bIsKeyDown(Keys.ControlKey)) != 0)
-					{
-						mdlUtil_STD.gsTmp = mdlUtil_STD.sGetInput("Copy Opportunity", "Shift or Control pressed for copy opportunity.", msMsg);
-					}
-
-					cmdRefresh.Refresh();
-					cmdSaveSelected.Refresh();
-					cmdSaveGroup.Refresh();
-					cmdClear.Refresh();
-					cmdClose.Refresh();
-					sprSpecs.Refresh();
-					grdVendors.Refresh();
-
-					this.Cursor = CursorHelper.CursorDefault;
+internal static void EditAdmin(string sApp)
+		{
 
 
-					return;
+			mdlUtil_ADO.gbSQLSkipError = -1;
+			CheckAdminDB();
 
-				}
+			//mdlUtil_STD.gsTmp = "select rtrim(key_code) , rtrim(userid) , rtrim(string_value), 99 ";
+			//mdlUtil_STD.gsTmp = "select rtrim(key_code) + ' ' + rtrim(userid) + ' ' + rtrim(string_value)"; //MIAK
+			mdlUtil_STD.gsTmp = "select rtrim(key_code) + '  \t' + rtrim(userid) + '  \t' + rtrim(string_value)"; //MIAK
+			mdlUtil_STD.bs(ref mdlUtil_STD.gsTmp, "from " + msUtilDB + "..admin where appname = " + mdlUtil_STD.sQT(sApp));
+			mdlUtil_STD.gsTmp = mdlUtil_ADO.sGetListInput(mdlUtil_ADO.goConn, "admin Table Entries", "Select an Entry to Edit", mdlUtil_STD.gsTmp);
+			if (mdlUtil_STD.gsTmp == "" || mdlUtil_STD.gbCancel)
+			{
+				return;
 			}
-			SAVE_NEW_ORDERS_FAILED:
+			//string sKey = mdlUtil_STD.sParseIt(mdlUtil_STD.gsTmp, mdlUtil_STD.TB, 1).Trim(); //key_code value  for item being edited
+			//string sUser = mdlUtil_STD.sParseIt(mdlUtil_STD.gsTmp, mdlUtil_STD.TB, 2).Trim(); //userid value for item being edited
+			//string sValue = mdlUtil_STD.sParseIt(mdlUtil_STD.gsTmp, mdlUtil_STD.TB, 3).Trim(); //string value
+			string[] parts = mdlUtil_STD.gsTmp.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); //MIAK
+			if (parts.Length < 3)
+			{
+				string tempnum = mdlUtil_STD.sGetInput("Update " , "Enter new value for this admin table entry.", "").Trim();
+
+				return;
+			}
 
 
-			this.Cursor = CursorHelper.CursorDefault;
+			// Extract key, user, and value
+			string sKey = parts[0].Trim();  // key_code value //MIAK
+			string sUser = parts[1].Trim(); // userid value //MIAK
+			string sValue = string.Join("\t", parts.Skip(2)).Trim(); // Combine remaining parts for string_value //MIAK
 
-			int tempRefParam27 = -1;
-			int tempRefParam28 = 11;
+			sValue = mdlUtil_STD.sGetInput("Update " + mdlUtil_STD.sQT(sKey) + "  for " + mdlUtil_STD.sQT(sUser), "Enter new value for this admin table entry.", sValue).Trim();
+			if (sValue == Strings.Chr(0).ToString() || mdlUtil_STD.gbCancel)
+			{
+				return;
+			}
+
+			if (sValue == "DELETE")
+			{
+				if (System.Windows.Forms.DialogResult.OK == MessageBox.Show("Delete key: " + sKey, "DELETE KEY", MessageBoxButtons.OKCancel))
+				{
+					mdlUtil_ADO.sql = "delete from admin where appName = " + mdlUtil_STD.sQT(sApp);
+					mdlUtil_STD.bs(ref mdlUtil_ADO.sql, "   and userid = " + mdlUtil_STD.sQT(sUser) + " and key_code = " + mdlUtil_STD.sQT(sKey));
+					mdlUtil_STD.giRes = mdlUtil_ADO.iSQL_DO(mdlUtil_ADO.goConn, mdlUtil_ADO.sql);
+					EditAdmin(sApp);
+				}
+				return;
+			}
+
+			SetAppAdmin(Path.GetFileNameWithoutExtension(Application.ExecutablePath), sKey, sUser, sValue);
+
+		}
+
+
+internal static void SetAppAdmin(string sAppName, string sKey, string sID, string sValue)
+		{
+
+
+			mdlUtil_STD.glRes = mdlUtil_STD.iReplaceStr(ref sValue, mdlUtil_STD.QT, "`"); //prevent sql error on full quote conflict
+			mdlUtil_STD.glRes = mdlUtil_STD.iReplaceStr(ref sValue, mdlUtil_STD.HQ, "`"); //prevent sql error on half quote conflict
+
+			string sCmd = "delete from " + mdlUtil_ADO.gsDBNameOpt + "admin ";
+			sCmd = sCmd + " where ";
+			sCmd = sCmd + "appname = " + mdlUtil_STD.sQT(sAppName) + " and ";
+			if (mdlUtil_ADO.gsDBType == "ORACLE")
+			{
+				sCmd = sCmd + "key = " + mdlUtil_STD.sQT(sKey) + " and ";
+			}
+			else
+			{
+				sCmd = sCmd + "key_code = " + mdlUtil_STD.sQT(sKey) + " and ";
+			}
+			sCmd = sCmd + "userid = " + mdlUtil_STD.sQT(sID);
+			mdlUtil_STD.glRes = mdlUtil_ADO.SQL_DO(mdlUtil_ADO.goConn, ref sCmd);
+
+			sCmd = "insert into " + mdlUtil_ADO.gsDBNameOpt + "admin values ( ";
+			sCmd = sCmd + mdlUtil_STD.sQT(sAppName) + ", ";
+			sCmd = sCmd + mdlUtil_STD.sQT(sKey) + ", ";
+			sCmd = sCmd + mdlUtil_STD.sQT(sID) + ", ";
+			sCmd = sCmd + mdlUtil_STD.sQT(sValue) + ") ";
+			mdlUtil_STD.glRes = mdlUtil_ADO.SQL_DO(mdlUtil_ADO.goConn, ref sCmd);
+		}
