@@ -1,130 +1,35 @@
-at EOS.mdlUtil_STD.SetFormStatus(Form ctrForm, Int32& nBlankTime, String sStatusMsg, Int32& nMousePntr) in C:\Users\t3kr\source\repos\SIT Applications\EOS 03032025\Upgraded\Util_std.cs:line 1663
-2025-04-02 14:17:38,253 [1] ERROR -EOS.mdlUtil_STD - An Error has occured
-Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot perform runtime binding on a null reference
-
-internal static void SetFormStatus(Form ctrForm, ref int nBlankTime, string sStatusMsg, ref int nMousePntr)//sqgddec03
+sdir ="\0"
+internal static bool bDirExists(string sDir, bool bCreate = true)
 		{
+			bool result = false;
+			Object fso = new Object();
+
 			try
 			{
-				
-				int temp_interval = Convert.ToInt32(Math.Abs(nBlankTime));
 
-				int lHaltStarted = 0;
-				Control PNL = null;
-				Timer TMR = null;
-				Form frm = null;
-				if(ctrForm == null)//sqgddec03
-                {
-					ctrForm = mdlUtil_STD.LastActiveForm;
-                }
-				if(ctrForm == null)
-                {
-					return;
-                }
-				//UPGRADE_TODO: (1069) Error handling statement (On Error Resume Next) was converted to a pattern that might have a different behavior. More Information: https://docs.mobilize.net/vbuc/ewis#1069
-				try
+
+				if (!Directory.Exists(sDir))
 				{
-
-
-
-					if (ctrForm != null)
+					if (bCreate)
 					{
-                        if (ctrForm.GetType().GetProperty("pnlStatus") != null && !Convert.ToBoolean(((dynamic)((dynamic)ctrForm).pnlStatus).Visible))
-                        {
-                            frm = ctrForm;
-                            PNL = (Control)((dynamic)ctrForm).pnlStatus;
-                            TMR = (Timer)((dynamic)ctrForm).tmrStatus;
-
-
-                        }
-                        else
-                        {
-                            frm = gfrmMain;
-                            PNL = (Control)((dynamic)gfrmMain).pnlStatus;
-                            TMR = (Timer)((dynamic)gfrmMain).tmrStatus;
-
-                        }
-                    }
-						
-					
-				}
-				catch (Exception ex)
-				{
-					log.Error("An Error has occured", ex);
-					//NotUpgradedHelper.NotifyNotUpgradedElement("Resume in On-Error-Resume-Next Block");
-					//MessageBox.Show(exc.StackTrace, "Dev");//P4PL Debug
-				}
-				if (nBlankTime == 0)
-				{ //Stay Up until overwritten and reappear if next blanktime is not 0
-					if(TMR != null)
+						Directory.CreateDirectory(sDir);
+						return true;
+					}
+					else
 					{
-                        TMR.Tag = sStatusMsg;
-                    }
-                        
-				}
-				if (nBlankTime == -1)
-				{
-					nBlankTime = 0;
-				} //-1 means stay up until overwritten, but don't restore later
-				if (nMousePntr < 0)
-				{
-					nMousePntr *= -1;
-					//    PNL.ForeColor = RED
+						return false;
+					}
 				}
 				else
 				{
-					//    PNL.ForeColor = BLACK
+					return true;
 				}
-				if ((dynamic)PNL != null)
-				{
-					((dynamic)((dynamic)PNL).Items[0]).Text = sStatusMsg;//P4PL
-				}
-				//((dynamic)((dynamic)PNL).Items[0]).Text = sStatusMsg;//P4PL//t3kr 3/18
-				//((dynamic)((dynamic)PNL).pnlStatus_Panels_Panel1).text = sStatusMsg;
-				// If FRM.Hwnd <> ctrForm.Hwnd Then
-				//     Screen.MousePointer = nMousePntr
-				// Else
-				frm.Cursor = ReflectionHelper.GetValueForcedToCursor(nMousePntr);
-				// End If
-				TMR.Enabled = false;
-				if (temp_interval == 0)
-				{
-					TMR.Enabled = false;
-				}
-				else
-				{
-					TMR.Interval = temp_interval;
-					TMR.Enabled = true;
-				}
-				TMR.Enabled = true;
-				PNL.Refresh();
-				if (nBlankTime < -1)
-				{ //FREEZE PROCESSING FOR DURATION OF TIME
-					lHaltStarted = Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds);
-
-					while (lHaltStarted + Math.Abs(nBlankTime / 1000d) > DateTime.Now.TimeOfDay.TotalSeconds)
-					{
-						//do nothing - especially not DoEvents
-					};
-				}
-				//JT4M START
-				if (nBlankTime > -1 && frmRequests.DefInstance.SapOrderTimerDelay == true)
-				{ //FREEZE PROCESSING FOR DURATION OF TIME
-					lHaltStarted = Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds);
-
-					while (lHaltStarted + Math.Abs(nBlankTime / 1000d) > DateTime.Now.TimeOfDay.TotalSeconds)
-					{
-						//do nothing - especially not DoEvents
-					};
-				}
-				//JT4M END
 			}
 			catch (Exception ex)
 			{
 				log.Error("An Error has occured", ex);
-				//MessageBox.Show(ex.StackTrace, "Dev");//P4PL debug 
+				//SetStatus -1, "Unable to Create or Confirm: " & sDir, 0
+				result = false;
 			}
-
-			//UPGRADE_TODO: (1065) Error handling statement (On Error Goto) could not be converted. More Information: https://docs.mobilize.net/vbuc/ewis#1065
-			//UpgradeHelpers.Helpers.NotUpgradedHelper.NotifyNotUpgradedElement("On Error Goto Label (0)");
+			return result;
 		}
