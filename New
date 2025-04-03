@@ -1,155 +1,130 @@
- public void Open_Lease(string sLeaseID)
-        {
-            //set default for vendor
-            DataSet recLease = null;
+at EOS.mdlUtil_STD.SetFormStatus(Form ctrForm, Int32& nBlankTime, String sStatusMsg, Int32& nMousePntr) in C:\Users\t3kr\source\repos\SIT Applications\EOS 03032025\Upgraded\Util_std.cs:line 1663
+2025-04-02 14:17:38,253 [1] ERROR -EOS.mdlUtil_STD - An Error has occured
+Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot perform runtime binding on a null reference
 
-            string sTmp = "select l.*, r.rental_id ";
-            mdlUtil_STD.bs(ref sTmp, "from lmsLease l inner join requests r on r.lease_id = l.lease_id ");
-            mdlUtil_STD.bs(ref sTmp, "where l.lease_id = 0" + sLeaseID);
+internal static void SetFormStatus(Form ctrForm, ref int nBlankTime, string sStatusMsg, ref int nMousePntr)//sqgddec03
+		{
+			try
+			{
+				
+				int temp_interval = Convert.ToInt32(Math.Abs(nBlankTime));
 
-            bool tempRefParam = false;
-            mdlUtil_STD.glRes = mdlUtil_ADO.iSQL_OpenSet(mdlUtil_ADO.goConn, ref recLease, sTmp, ref tempRefParam);
-
-            if (mdlUtil_STD.glRes == 0)
-            {
-                int tempRefParam2 = 6000;
-                int tempRefParam3 = 0;
-                mdlUtil_STD.SetStatus(ref tempRefParam2, "Error opening Lease Record.", ref tempRefParam3);
-            }
-            else
-            {
-                if (recLease.Tables[0].Rows.Count == 0)
+				int lHaltStarted = 0;
+				Control PNL = null;
+				Timer TMR = null;
+				Form frm = null;
+				if(ctrForm == null)//sqgddec03
                 {
-                    int tempRefParam4 = 3000;
-                    int tempRefParam5 = 0;
-                    mdlUtil_STD.SetStatus(ref tempRefParam4, "Creating new Lease Detail information.", ref tempRefParam5);
-
-                    sTmp = mdlUtil_ADO.sSQL_QuickData(mdlUtil_ADO.goConn, "select rental_id, expected_duration from lmsAssessment where lease_id = " + sLeaseID, true);
-                    if (Strings.Len(sTmp) < 2)
-                    {
-                        sTmp = "n/a" + mdlUtil_STD.TB + "48";
-                    }
-
-                    lblLeaseID.Text = sLeaseID;
-
-                    dtpOrderedOn.SetValue(DateTime.Now);
-                    if (sLeaseID == "-1")
-                    {
-                        dtpOrderedOn.SetValue("");
-                    }
-
-                    txtLeasePrice.Text = "";
-                    if (cboLeaseType.Items.Count == 0)
-                    {
-                        MessageBox.Show("No LeaseTypes listed in the LookupLeaseType table.", AssemblyHelper.GetTitle(System.Reflection.Assembly.GetExecutingAssembly()));
-                    }
-                    else
-                    {
-                        cboLeaseType.SelectedIndex = 0;
-                    }
-                    if (sLeaseID == "-1")
-                    {
-                        mdlUtil_STD.glRes = mdlUtil_STD.iSetList(cboLeaseStatus, "new", 0);
-                    }
-                    else
-                    {
-                        mdlUtil_STD.glRes = mdlUtil_STD.iSetList(cboLeaseStatus, "open", 0);
-                    }
-                    if (cboVendorID.Items.Count == 0)
-                    {
-                        MessageBox.Show("No Vendors listed for LEASING.", AssemblyHelper.GetTitle(System.Reflection.Assembly.GetExecutingAssembly()));
-                    }
-                    else
-                    {
-                        cboVendorID.SelectedIndex = 0;
-                    }
-                    txtLeaseTerm.Text = mdlUtil_STD.sParseIt(sTmp, mdlUtil_STD.TB, 2);
-                    dtpEndsOn.SetValue(DateTime.Now.AddYears(4));
-                    dtpEndsOn.SetValue("9/27/2004");
-                    txtBookValue.Text = "";
-                    txtSaleValue.Text = "";
-                    dtpSoldOn.SetValue("9/27/2004");
-                    dtpBuyoutDate.SetValue("9/27/2004");
-                    txtBuyoutAmount.Text = "";
-                    txtBuyoutID.Text = "";
-                    lblRentalID.Text = mdlUtil_STD.sParseIt(sTmp, mdlUtil_STD.TB, 1);
-
+					ctrForm = mdlUtil_STD.LastActiveForm;
                 }
-                else
+				if(ctrForm == null)
                 {
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    lblLeaseID.Text = Convert.ToString(recLease.Tables[0].Rows[0]["lease_id"]);
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    dtpOrderedOn.SetValue(Convert.ToString(recLease.Tables[0].Rows[0]["ordered_on"]) + "");
-                    if (Convert.ToString(recLease.Tables[0].Rows[0]["ordered_on"]) == string.Empty)
-                    {
-                        dtpOrderedOn.SetValue("9/27/2004");
-                        dtpOrderedOn.Checked = false;
-                    }
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    //txtLeasePrice.Text = Convert.ToString(Convert.ToInt32(recLease.Tables[0].Rows[0]["lease_price"])) + "";//ayg9
-                    txtLeasePrice.Text = Convert.ToString(Convert.ToDouble(recLease.Tables[0].Rows[0]["lease_price"])) + "";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    cboLeaseType.Text = Convert.ToString(recLease.Tables[0].Rows[0]["lease_type"]) + "\t";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    mdlUtil_STD.iSetList(cboLeaseStatus, Convert.ToString(recLease.Tables[0].Rows[0]["lease_status"]), 0);
-                    //cboLeaseStatus = recLease("lease_status") & ""
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    mdlUtil_STD.iSetList(cboVendorID, "", Convert.ToInt32(Double.Parse(Conversion.Val(Convert.ToString(recLease.Tables[0].Rows[0]["vendor_id"])).ToString() + "")));
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    txtLeaseTerm.Text = Convert.ToString(recLease.Tables[0].Rows[0]["lease_term"]) + "";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    dtpEndsOn.SetValue(Convert.ToString(recLease.Tables[0].Rows[0]["ends_on"]) + "");
-                    if (Convert.ToString(recLease.Tables[0].Rows[0]["ends_on"]) == string.Empty)
-                    {
-                        dtpEndsOn.SetValue("9/27/2004");
-                        dtpEndsOn.Checked = false;//JT4M
-                    }
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    txtBookValue.Text = Convert.ToString(recLease.Tables[0].Rows[0]["book_value"]) + "";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    txtSaleValue.Text = Convert.ToString(recLease.Tables[0].Rows[0]["sale_value"]) + "";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    dtpSoldOn.SetValue(Convert.ToString(recLease.Tables[0].Rows[0]["sold_on"]) + "");
-                    if (Convert.ToString(recLease.Tables[0].Rows[0]["sold_on"]) == string.Empty)
-                    {
-                        dtpSoldOn.SetValue("9/27/2004");
-                        dtpSoldOn.Checked = false;//JT4M
-                    }
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    lblContractNumber.Text = Convert.ToString(recLease.Tables[0].Rows[0]["contract_number"]) + "";
-
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    dtpBuyoutDate.SetValue(Convert.ToString(recLease.Tables[0].Rows[0]["buyout_date"]) + "");
-                    if (Convert.ToString(recLease.Tables[0].Rows[0]["buyout_date"]) == string.Empty)
-                    {
-                        dtpBuyoutDate.SetValue("9/27/2004");
-                        dtpBuyoutDate.Checked = false;
-                    }
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    txtBuyoutAmount.Text = Convert.ToString(recLease.Tables[0].Rows[0]["buyout_amount"]) + "";
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    txtBuyoutID.Text = Convert.ToString(recLease.Tables[0].Rows[0]["buyout_id"]) + "";
-
-
-
-                    //UPGRADE_WARNING: (2077) Change the default 0 index in the Rows property with the correct one. More Information: https://docs.mobilize.net/vbuc/ewis#2077
-                    lblRentalID.Text = Convert.ToString(recLease.Tables[0].Rows[0]["rental_id"]) + "";
-
-
+					return;
                 }
+				//UPGRADE_TODO: (1069) Error handling statement (On Error Resume Next) was converted to a pattern that might have a different behavior. More Information: https://docs.mobilize.net/vbuc/ewis#1069
+				try
+				{
 
-            }
 
-            optShow[3].Enabled = true;
-            optShow[3].Checked = true;
-            optShow_CheckedChanged(optShow[3], new EventArgs());
 
-            try
-            {
-                txtLeaseTerm.Focus();
-            }
-            catch
-            {
-            }
-        }
+					if (ctrForm != null)
+					{
+                        if (ctrForm.GetType().GetProperty("pnlStatus") != null && !Convert.ToBoolean(((dynamic)((dynamic)ctrForm).pnlStatus).Visible))
+                        {
+                            frm = ctrForm;
+                            PNL = (Control)((dynamic)ctrForm).pnlStatus;
+                            TMR = (Timer)((dynamic)ctrForm).tmrStatus;
+
+
+                        }
+                        else
+                        {
+                            frm = gfrmMain;
+                            PNL = (Control)((dynamic)gfrmMain).pnlStatus;
+                            TMR = (Timer)((dynamic)gfrmMain).tmrStatus;
+
+                        }
+                    }
+						
+					
+				}
+				catch (Exception ex)
+				{
+					log.Error("An Error has occured", ex);
+					//NotUpgradedHelper.NotifyNotUpgradedElement("Resume in On-Error-Resume-Next Block");
+					//MessageBox.Show(exc.StackTrace, "Dev");//P4PL Debug
+				}
+				if (nBlankTime == 0)
+				{ //Stay Up until overwritten and reappear if next blanktime is not 0
+					if(TMR != null)
+					{
+                        TMR.Tag = sStatusMsg;
+                    }
+                        
+				}
+				if (nBlankTime == -1)
+				{
+					nBlankTime = 0;
+				} //-1 means stay up until overwritten, but don't restore later
+				if (nMousePntr < 0)
+				{
+					nMousePntr *= -1;
+					//    PNL.ForeColor = RED
+				}
+				else
+				{
+					//    PNL.ForeColor = BLACK
+				}
+				if ((dynamic)PNL != null)
+				{
+					((dynamic)((dynamic)PNL).Items[0]).Text = sStatusMsg;//P4PL
+				}
+				//((dynamic)((dynamic)PNL).Items[0]).Text = sStatusMsg;//P4PL//t3kr 3/18
+				//((dynamic)((dynamic)PNL).pnlStatus_Panels_Panel1).text = sStatusMsg;
+				// If FRM.Hwnd <> ctrForm.Hwnd Then
+				//     Screen.MousePointer = nMousePntr
+				// Else
+				frm.Cursor = ReflectionHelper.GetValueForcedToCursor(nMousePntr);
+				// End If
+				TMR.Enabled = false;
+				if (temp_interval == 0)
+				{
+					TMR.Enabled = false;
+				}
+				else
+				{
+					TMR.Interval = temp_interval;
+					TMR.Enabled = true;
+				}
+				TMR.Enabled = true;
+				PNL.Refresh();
+				if (nBlankTime < -1)
+				{ //FREEZE PROCESSING FOR DURATION OF TIME
+					lHaltStarted = Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds);
+
+					while (lHaltStarted + Math.Abs(nBlankTime / 1000d) > DateTime.Now.TimeOfDay.TotalSeconds)
+					{
+						//do nothing - especially not DoEvents
+					};
+				}
+				//JT4M START
+				if (nBlankTime > -1 && frmRequests.DefInstance.SapOrderTimerDelay == true)
+				{ //FREEZE PROCESSING FOR DURATION OF TIME
+					lHaltStarted = Convert.ToInt32(DateTime.Now.TimeOfDay.TotalSeconds);
+
+					while (lHaltStarted + Math.Abs(nBlankTime / 1000d) > DateTime.Now.TimeOfDay.TotalSeconds)
+					{
+						//do nothing - especially not DoEvents
+					};
+				}
+				//JT4M END
+			}
+			catch (Exception ex)
+			{
+				log.Error("An Error has occured", ex);
+				//MessageBox.Show(ex.StackTrace, "Dev");//P4PL debug 
+			}
+
+			//UPGRADE_TODO: (1065) Error handling statement (On Error Goto) could not be converted. More Information: https://docs.mobilize.net/vbuc/ewis#1065
+			//UpgradeHelpers.Helpers.NotUpgradedHelper.NotifyNotUpgradedElement("On Error Goto Label (0)");
+		}
