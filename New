@@ -1,4 +1,5 @@
 sdir ="\0"
+
 internal static bool bDirExists(string sDir, bool bCreate = true)
 		{
 			bool result = false;
@@ -33,3 +34,14 @@ internal static bool bDirExists(string sDir, bool bCreate = true)
 			}
 			return result;
 		}
+
+2025-03-28 16:56:20,087 [1] ERROR -EOS.mdlUtil_ADO - An Error has occured
+System.Data.SqlClient.SqlException (0x80131904): Column name or number of supplied values does not match table definition.
+   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at System.Data.SqlClient.SqlCommand.RunExecuteNonQueryTds(String methodName, Boolean async, Int32 timeout, Boolean asyncWrite)
+   at System.Data.SqlClient.SqlCommand.InternalExecuteNonQuery(TaskCompletionSource`1 completion, String methodName, Boolean sendToPipe, Int32 timeout, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
+   at System.Data.SqlClient.SqlCommand.ExecuteNonQuery()
+   at EOS.mdlUtil_ADO.SQL_DO(SqlConnection oConn, String& sCmd, Boolean& bIsMulti, Int32& lRowsAffected) in C:\Users\t3kr\source\repos\SIT Applications\APP-302 Old TESTSERVER\Upgraded\Util_ADO.cs:line 1278
