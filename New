@@ -1,47 +1,61 @@
-sdir ="\0"
-
-internal static bool bDirExists(string sDir, bool bCreate = true)
+public void InitWordDocument(string sOption, string sFile)
 		{
-			bool result = false;
+
 			Object fso = new Object();
 
+			bool bTryAgain = true;
+			mDoc = null;
 			try
 			{
 
+				sFile = sFile.ToUpper();
 
-				if (!Directory.Exists(sDir))
+				if (!mdlUtil_STD.FileExists(sFile))
 				{
-					if (bCreate)
+					if (sFile.Substring(Math.Max(sFile.Length - 3, 0)) == "DOC")
 					{
-						Directory.CreateDirectory(sDir);
-						return true;
+						sFile = sFile + "X"; //try DOCX instead
 					}
-					else
+					if (!mdlUtil_STD.FileExists(sFile))
 					{
-						return false;
+						if (sFile.Substring(Math.Max(sFile.Length - 4, 0)) != "DOCX")
+						{
+							sFile = sFile + ".DOC";
+							if (!mdlUtil_STD.FileExists(sFile))
+							{
+								sFile = sFile + "X";
+							}
+						}
+					}
+					if (!mdlUtil_STD.FileExists(sFile))
+					{
+						SystemSounds.Beep.Play();
+						int tempRefParam = -1;
+						int tempRefParam2 = 0;
+						mdlUtil_STD.SetStatus(ref tempRefParam, sFile + " Not Found. Unable to Print or Export.", ref tempRefParam2);
+						mdlUtil_STD.gbCancel = true;
+						MessageBox.Show(sFile + " Not Found. Unable to Print or Export.", "FILE NOT FOUND", MessageBoxButtons.OK);
+						return;
 					}
 				}
-				else
-				{
-					return true;
-				}
-			}
-			catch (Exception ex)
-			{
-				log.Error("An Error has occured", ex);
-				//SetStatus -1, "Unable to Create or Confirm: " & sDir, 0
-				result = false;
-			}
-			return result;
-		}
 
-2025-03-28 16:56:20,087 [1] ERROR -EOS.mdlUtil_ADO - An Error has occured
-System.Data.SqlClient.SqlException (0x80131904): Column name or number of supplied values does not match table definition.
-   at System.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
-   at System.Data.SqlClient.SqlInternalConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
-   at System.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, Boolean callerHasConnectionLock, Boolean asyncClose)
-   at System.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
-   at System.Data.SqlClient.SqlCommand.RunExecuteNonQueryTds(String methodName, Boolean async, Int32 timeout, Boolean asyncWrite)
-   at System.Data.SqlClient.SqlCommand.InternalExecuteNonQuery(TaskCompletionSource`1 completion, String methodName, Boolean sendToPipe, Int32 timeout, Boolean& usedCache, Boolean asyncWrite, Boolean inRetry)
-   at System.Data.SqlClient.SqlCommand.ExecuteNonQuery()
-   at EOS.mdlUtil_ADO.SQL_DO(SqlConnection oConn, String& sCmd, Boolean& bIsMulti, Int32& lRowsAffected) in C:\Users\t3kr\source\repos\SIT Applications\APP-302 Old TESTSERVER\Upgraded\Util_ADO.cs:line 1278
+
+
+				while(bTryAgain)
+				{
+
+					switch(sOption)
+					{
+						case "NEW" : 
+							int tempRefParam3 = -1; 
+							int tempRefParam4 = 11; 
+							mdlUtil_STD.SetStatus(ref tempRefParam3, "Attempting to load Micorsoft Word Document Template: " + sFile, ref tempRefParam4); 
+							//UPGRADE_WARNING: (1068) tempRefParam5 of type Variant is being forced to string. More Information: https://docs.mobilize.net/vbuc/ewis#1068 
+							object tempRefParam5 = sFile; 
+							object tempRefParam6 = false; 
+							object tempRefParam7 = Type.Missing; 
+							object tempRefParam8 = Type.Missing; 
+							mDoc = mWord.Documents.Add(ref tempRefParam5, ref tempRefParam6, ref tempRefParam7, ref tempRefParam8); 
+							sFile = Convert.ToString(tempRefParam5); 
+							 
+							break;
