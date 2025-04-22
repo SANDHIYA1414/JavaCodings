@@ -4,183 +4,94 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Configuration;
+using log4net;
+using log4net.Config;
 using System.IO;
-using System.IO.Compression;
-using LogFile;
-using System.Globalization;
-using System.Net.Mail;
 
-namespace SAPInvoiceMonthlyArchive
+namespace LogFile
 {
-    class Program
+    public class Logger
     {
-        static void Main(string[] args)
+        public static void LogError(object objMsg, Exception ex)
         {
-            try
-            {
-                Logger.LogInfo("***** Started *****");
-                string sDate = DateTime.Now.ToString();
-                DateTime datevalue = (Convert.ToDateTime(sDate.ToString()));
-                string mn = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datevalue.Month);
-                string prevMn;
-                if (mn=="January")
-                {
-                    prevMn = "December";
-                }
-                else
-                {
-                     prevMn = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datevalue.Month - 1);
-                }
-               
-                //string previousMonth = DateTime.Now.AddMonths(-1).ToString("MMMM");
-               
-                string mon = mn.Substring(0, 3);
-                string prevMon = prevMn.Substring(0, 3);
-                string yy = datevalue.Year.ToString();
-
-                Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                var CreateArchive = config.AppSettings.Settings["CreateArchive"].Value;
-                var SourceFilePath = config.AppSettings.Settings["SourceFilePath"].Value;
-
-               
-
-                int i = 0;
-                if (mon != CreateArchive)
-                {
-                    if (!Directory.Exists(SourceFilePath + yy))
-                    {
-                        Directory.CreateDirectory(SourceFilePath + yy);
-                        Logger.LogInfo(SourceFilePath + yy + " directory has been created");
-                    }
-
-                    var DestinationFilePath = config.AppSettings.Settings["DestinationFilePath"].Value;
-                    if (!Directory.Exists(DestinationFilePath + yy + "/" + prevMon))
-                    {
-                        Directory.CreateDirectory(DestinationFilePath + yy + "/" + prevMon);
-                    }
-
-                    DirectoryInfo sourceinfo = new DirectoryInfo(SourceFilePath);
-                    DirectoryInfo target = new DirectoryInfo(DestinationFilePath + yy + "/" + prevMon);
-                    foreach (FileInfo fi in sourceinfo.GetFiles())
-                    {
-                        if (fi.Name.Substring(0, fi.Name.IndexOf('.')) == "PAYSP")
-                        {
-                            fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
-                            fi.Delete();
-                            Logger.LogInfo(fi.Name + " has been moved to the " + target + " and deleted from " + sourceinfo);
-                            i++;
-                        }
-                    }
-                }
-
-                else
-                {
-                    if (!Directory.Exists(SourceFilePath + (Convert.ToInt32(yy) - 1)))
-                    {
-                        Directory.CreateDirectory(SourceFilePath + (Convert.ToInt32(yy) - 1));
-                        Logger.LogInfo(SourceFilePath + (Convert.ToInt32(yy) - 1) + " directory has been created");
-                    }
-
-                    var DestinationFilePath = config.AppSettings.Settings["DestinationFilePath"].Value;
-                    if (!Directory.Exists(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon))
-                    {
-                        Directory.CreateDirectory(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon);
-                    }
-
-                    DirectoryInfo sourceinfo = new DirectoryInfo(SourceFilePath);
-                    DirectoryInfo target = new DirectoryInfo(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon);
-                    foreach (FileInfo fi in sourceinfo.GetFiles())
-                    {
-                        if (fi.Name.Substring(0, fi.Name.IndexOf('.')) == "PAYSP")
-                        {
-                            fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
-                            fi.Delete();
-                            Logger.LogInfo(fi.Name + " has been moved to the " + target + " and deleted from " + sourceinfo);
-                            i++;
-                        }
-                    }
-
-                    var ZipPath = config.AppSettings.Settings["ZipPath"].Value;
-                    string startPath = SourceFilePath + (Convert.ToInt32(yy) - 1).ToString();
-                    string zipPath = ZipPath + (Convert.ToInt32(yy) - 1).ToString() + " " + "Archive.zip";
-
-                    if (Directory.Exists(startPath))
-                    {
-                        ZipFile.CreateFromDirectory(startPath, zipPath);
-                        Logger.LogInfo("Zip file has been created for " + Convert.ToString(Convert.ToInt32(yy) - 1));
-                    }
-
-                    else
-                    {
-
-                    }
-                }
-
-                string sTo = config.AppSettings.Settings["AddressTo"].Value;
-                string sFrom = config.AppSettings.Settings["AddressFrom"].Value;
-                string sSubject = config.AppSettings.Settings["Subject"].Value;
-                //string sBody = config.AppSettings.Settings["Body"].Value;
-                bool email;
-
-                if (i == 0)
-                {
-                    Logger.LogInfo("There is no file to move to the " + prevMon + " folder");
-                    email = SendEmailNotification(sTo, sFrom, sSubject, "There is no file to move to the " + prevMon + " folder");
-                }
-
-                else
-                {
-                    Logger.LogInfo("***** Sucessfully file moved to the " + prevMon + " folder *******");
-                    email = SendEmailNotification(sTo, sFrom, sSubject, "Sucessfully file moved to the " + prevMon + " folder ");
-                }
-
-
-                if (email == true)
-                {
-                    Logger.LogInfo("Email notification is sent successfully");
-                }
-
-                else
-                {
-                    Logger.LogInfo("Failed to send Email notification");
-                }
-            }
-
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.Message);
-            }
+            LogError(objMsg);
         }
 
-        public static bool SendEmailNotification(string AddressTo, string AddressFrom, string Subject, string Body)
+        public static void LogInfo(string Message)
         {
+            DateTime dt = new DateTime();
             try
             {
-                MailMessage mailMsg = new MailMessage();
-                MailAddress mailAddress = null;
-                mailAddress = new MailAddress(AddressFrom);
+                Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                var LogPath = config.AppSettings.Settings["LogPath"].Value;
+                var filePATH = LogPath + "SAPInvoiceArchivalLog.txt";
 
-                try
+                if (!(Directory.Exists(LogPath)))
                 {
-                    SmtpClient smtpClient = new SmtpClient(System.Configuration.ConfigurationManager.AppSettings["SMTPServer"], Convert.ToInt32(25));
-                    System.Net.NetworkCredential credentials = new System.Net.NetworkCredential();
-                    smtpClient.Credentials = credentials;
-                    smtpClient.Send(AddressFrom, AddressTo, Subject, Body);
-                    mailMsg.Dispose();
-                    return true;
+                    DirectoryInfo di = Directory.CreateDirectory(LogPath);
+
                 }
-                catch (Exception ex)
+                bool CheckFileExisitence = File.Exists(filePATH);
+                if (CheckFileExisitence)
                 {
-                    Logger.LogError("Email Error for smtp: ", ex);
-                    if (mailMsg != null)
-                        mailMsg.Dispose();
-                    return false;
+                    dt = File.GetCreationTime(filePATH);
+                    if (DateTime.Now.Date > dt.Date)
+                    {
+                        string newpath = filePATH + "." + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + (DateTime.Now.Day - 1);
+                        System.IO.File.Move(filePATH, newpath);
+                    }
                 }
+                using (StreamWriter file = File.AppendText(filePATH))
+                {
+
+                    file.WriteLine(DateTime.Now + "   INFO TOTL -    " + "  :{0}", Message);
+                    // file.Flush();
+                }
+
+
             }
             catch (Exception ex)
             {
-                Logger.LogError("Email Error:", ex);
-                return false;
+
+
+            }
+            finally
+            {
+
+            }
+
+        }
+
+        public static void LogDebug(string Message)
+        {
+            LogInfo(Message);
+        }
+        public static void LogError(object objMsg)
+        {
+            try
+            {
+
+                string dirPATH = System.Configuration.ConfigurationManager.AppSettings["Dir_Path"];
+                string filePATH = System.Configuration.ConfigurationManager.AppSettings["LogPath"];
+                if (!(Directory.Exists(dirPATH)))
+                {
+                    DirectoryInfo di = Directory.CreateDirectory(dirPATH);
+
+                }
+
+                using (StreamWriter file = File.AppendText(filePATH))
+                {
+
+                    file.WriteLine(DateTime.Now + "   INFO SAP Invoice -    " + "  :{0}", objMsg);
+                    file.Flush();
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+
+
             }
         }
     }
