@@ -1,7 +1,17 @@
-Wed **/** 01:00 Survey_Addl_Fields.bat
-Wed **/** 07:00 PTT_AccrualYTD.bat
-Wed **/** 06:00 TreeRecords_AutoMail.bat
-Mon **/** 05:00 PI_1st_Patrol_REPORT.bat
-Mon **/** 05:00 PI_2nd_Patrol_REPORT.bat
-Mon **/** 05:00 TC_1st_Patrol_REPORT.bat
-Mon **/** 05:00 TC_2nd_Patrol_REPORT.bat
+echo ********************** Start Job Sequence ********************** >> SAPInvoice.txt
+date /t >> SAPInvoice.txt
+SAPInvoice.exe -FPAYSP.B.TT.TTBX.CINVOICE -SPRETAPPDBSWC019 -DVMI
+
+if not exist PAYSP.B.TT.TTBX.CINVOICE GOTO TheError
+Copy D:\VMI\SAPInvoice\PAYSP.B.TT.TTBX.CINVOICE  \\smb2-rcnas02-dr.fxnas02.pge.com\esftenvprodmig-fs01\SAP\Vegmgmt\PaymentFiles\Outbound\  >> SAPInvoice.txt
+Copy D:\VMI\SAPInvoice\AP_DA_TT_IN.NOPARM.PR1.11  \\smb2-rcnas02-dr.fxnas02.pge.com\esftenvprodmig-fs01\SAP\Vegmgmt\PaymentFiles\Outbound\  >> SAPInvoice.txt
+call archive.bat
+
+goto TheEnd
+
+:TheError
+echo *** Error generating invoice file ***  File not sent to SAP! >> SAPInvoice.txt
+
+del run.flg
+:TheEnd
+
