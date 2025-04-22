@@ -1,98 +1,219 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Configuration;
-using log4net;
-using log4net.Config;
-using System.IO;
+@echo off
+setlocal enableextensions enabledelayedexpansion
 
-namespace LogFile
-{
-    public class Logger
-    {
-        public static void LogError(object objMsg, Exception ex)
-        {
-            LogError(objMsg);
-        }
+REM **************************START JOB ARRAY*************************************************
 
-        public static void LogInfo(string Message)
-        {
-            DateTime dt = new DateTime();
-            try
-            {
-                Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                var LogPath = config.AppSettings.Settings["LogPath"].Value;
-                var filePATH = LogPath + "SAPInvoiceArchivalLog.txt";
+set jobpath=d:\vmi\sqlexporter\batch\
 
-                if (!(Directory.Exists(LogPath)))
-                {
-                    DirectoryInfo di = Directory.CreateDirectory(LogPath);
+REM ************************** '**/**' ANY DAY, ANY MONTH OF THE YEAR ************************
 
-                }
-                bool CheckFileExisitence = File.Exists(filePATH);
-                if (CheckFileExisitence)
-                {
-                    dt = File.GetCreationTime(filePATH);
-                    if (DateTime.Now.Date > dt.Date)
-                    {
-                        string newpath = filePATH + "." + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + (DateTime.Now.Day - 1);
-                        System.IO.File.Move(filePATH, newpath);
-                    }
-                }
-                using (StreamWriter file = File.AppendText(filePATH))
-                {
+REM **************************JOBARRAY FORMAT: MONTH/DAY TIME, COMMAND TO BE CALLED
+REM set jobmaxindex=0
+REM set jobarray[0]=Mon **/** 09:27 Survey_Addl_Fields_Test.bat
 
-                    file.WriteLine(DateTime.Now + "   INFO TOTL -    " + "  :{0}", Message);
-                    // file.Flush();
-                }
+for /f "delims=" %%a in (schedule.txt) do (
+  set /a jobmaxindex+=1
+  set jobarray[!jobmaxindex!]=%%a
+)
 
 
-            }
-            catch (Exception ex)
-            {
+REM **************************END  JOB ARRAY*************************************************
+
+REM **************GET LOCAL DATE/TIME VARIABLES POPULATED************************************ 
+set dt=%date%
+set tm=%time%
+set bk=**
+set bkdy=***
+
+REM Debug: 0=None, 1=On, 2=Verbose
+set debug=1
 
 
-            }
-            finally
-            {
+REM **************GET LOCAL DATE/TIME VARIABLES POPULATED************************************
 
-            }
-
-        }
-
-        public static void LogDebug(string Message)
-        {
-            LogInfo(Message);
-        }
-        public static void LogError(object objMsg)
-        {
-            try
-            {
-
-                string dirPATH = System.Configuration.ConfigurationManager.AppSettings["Dir_Path"];
-                string filePATH = System.Configuration.ConfigurationManager.AppSettings["LogPath"];
-                if (!(Directory.Exists(dirPATH)))
-                {
-                    DirectoryInfo di = Directory.CreateDirectory(dirPATH);
-
-                }
-
-                using (StreamWriter file = File.AppendText(filePATH))
-                {
-
-                    file.WriteLine(DateTime.Now + "   INFO SAP Invoice -    " + "  :{0}", objMsg);
-                    file.Flush();
-                }
+REM * Should be 1 minute less than main batch job interval
+set jobinterval=9
 
 
-            }
-            catch (Exception ex)
-            {
+REM ************** DATE RETURNS DAY OF THE WEEK, MM/DD/YYYY************************************
+set  "dy=!dt:~0,3!"
+set  "mn=!dt:~4,2!"
+set  "dd=!dt:~7,2!"
+set  "hh=!tm:~0,2!"
+set  "mm=!tm:~3,2!"
+
+REM *************** Run through jobs
+
+FOR /L %%A IN (1,1,!jobmaxindex!) DO (
+
+	REM *********** Get the current job values from array
+	set "jdy=!jobarray[%%A]:~0,3!"
+	set "jmn=!jobarray[%%A]:~4,2!"
+	set "jdd=!jobarray[%%A]:~7,2!"
+	set /a jhh=1000!jobarray[%%A]:~10,2! %% 100  
+	set "jmm=!jobarray[%%A]:~13,2!"  
+	set "jcmd=!jobarray[%%A]:~16,50!"
+	
+	REM set /a jhh= 1000!jhh! %% 100
+	if !debug! gtr 0 (
+		echo. 
+		echo ******************
+		echo.
+		echo CHECKING !jobarray[%%A]!... 
+		echo CHECKING !jobarray[%%A]!... >> batchlog.txt
+	)
+	set cnt=0
+	
+	REM **************IF THE JOB NEEDS TO BE RUN THIS MONTH *************************	
+
+	if !mn! equ !jmn! (
+		set cnt=1
+	)
+
+	if !bk! equ !jmn!  (
+		set cnt=1
+	)
+	
+	if !debug! gtr 0 (
+		if "!cnt!" equ "0" (
+			echo Month Failed: !mn! not within !jmn! 
+			echo Month Failed: !mn! not within !jmn!   >> batchlog.txt
+		)
+	)
+	
+	if "!cnt!" equ "1" (
+	
+		if !debug! gtr 1 (
+			echo Month Successful...
+			echo Month Successful...   >> batchlog.txt
+		)
+	
+		set cnt=0
+
+		REM **************IF THE JOB NEEDS TO BE RUN THIS DAY OF THE WEEK *************************
+		
+		if !dy! equ !jdy! (
+			set cnt=1
+		)
+
+		if !jdy! equ !bkdy! (
+			set cnt=1
+		)
+		
+		if !debug! gtr 0 (
+			if "!cnt!" equ "0" (
+				echo Day of the Week Failed: !dy! not within !jdy! 
+				echo !dt! !tm! - Day of the Week Failed: !dy! not within !jdy!   >> batchlog.txt
+			)
+		)
+		
+		if "!cnt!" equ "1" (
+		
+			if !debug! gtr 1 (
+				echo Day of the Week Successful...
+				echo !dt! !tm! - Day of the Week Successful...   >> batchlog.txt
+			)
+			set cnt=0
+
+			REM **************IF THE JOB NEEDS TO BE RUN THIS DAY (TODAY) *************************
+			
+			if !dd! equ !jdd! (
+				set cnt=1
+			)
+
+			if !bk! equ !jdd! (
+				set cnt=1
+			)	
+
+			if !debug! gtr 0 (
+				if "!cnt!" equ "0" (	
+					echo Day Failed: !dd! not within !jdd! 
+					echo !dt! !tm! - Day Failed: !dd! not within !jdd!   >> batchlog.txt
+				)
+			)
+			
+			if "!cnt!" equ "1" (	
+			
+				if !debug! gtr 1 (
+					echo Day Successful... 
+					echo !dt! !tm! - Day Successful...   >> batchlog.txt
+				)
+
+		  REM ****************** send end time as current time + interval
+		 
+				set /a jemm= 1000!jmm! %% 100 + !jobinterval!
+
+				set /a jehh= !jhh! 
 
 
-            }
-        }
-    }
-}
+				REM ********************* Account for next hour if end time spans hour
+				if !jemm! gtr 60 (
+
+					set /a jehh=!jehh!+1
+					set /a jemm=!jemm!-60
+				)
+
+				REM ******************** Buffer minute with zeroes again, we don't need to worry about hour because the time function doesn't pad 0 for hour
+				set "formattedValue=000000!jemm!" 
+				set "jemm=!formattedValue:~-2!"			
+
+				REM echo *** Current Time: !hh!!mm! >> batchlog.txt
+				REM echo Time Test: !hh!!mm! between !jhh!!jmm! and !jehh!!jemm! 
+				REM echo Time Test: !hh!!mm! between !jhh!!jmm! and !jehh!!jemm!   >> batchlog.txt
+				REM ping 192.0.2.2 -n 1 -w 3000 > nul
+				
+				REM ****************** IF THE TIME IS BETWEEN JOB START AND JOB END TIMES THEN RUN JOB
+				if not !hh!!mm! lss !jhh!!jmm! ( 
+				
+					REM echo "!hh!!mm!" not earlier than "!jhh!!jmm!"
+					REM echo "!hh!!mm!" not earlier than "!jhh!!jmm!" >> batchlog.txt
+					REM ping 192.0.2.2 -n 1 -w 3000 > nul
+				
+					if not !hh!!mm! gtr !jehh!!jemm! ( 
+
+						REM echo "!hh!!mm!" not later than "!jehh!!jemm!"
+						REM echo "!hh!!mm!" not later than "!jehh!!jemm!" >> batchlog.txt
+						
+						if !debug! gtr 1 (
+							echo Time Successful... 
+							echo !dt! !tm! - Time Successful...   >> batchlog.txt
+						)
+						
+						if !debug! gtr 1 (
+							echo Running Job... 
+							echo !dt! !tm! - Running Job... >> batchlog.txt
+						)
+						ping 192.0.2.2 -n 1 -w 1000 > nul
+						
+						REM Run the job
+						start !jobpath!!jcmd!
+						
+						if !debug! gtr 0 (						
+							echo Ran Job: !jobpath!!jcmd!
+							echo !dt! !tm! - Ran Job: !jobpath!!jcmd! >> batchlog.txt
+						)
+					)
+					
+					if !debug! gtr 0 (
+						if !hh!!mm! gtr !jehh!!jemm! ( 
+							echo Time Failed: !hh!!mm! not between !jhh!!jmm! and !jehh!!jemm! 
+							echo !dt! !tm! - Time Failed: !hh!!mm! not between !jhh!!jmm! and !jehh!!jemm!   >> batchlog.txt
+						)
+					)
+				)
+				
+				if !debug! gtr 0 (
+					if !hh!!mm! lss !jhh!!jmm! ( 
+						echo Time Failed: !hh!!mm! not between !jhh!!jmm! and !jehh!!jemm! 
+						echo !dt! !tm! - Time Failed: !hh!!mm! not between !jhh!!jmm! and !jehh!!jemm!   >> batchlog.txt
+					)
+				)
+
+			)
+		)
+	)
+)
+:done
+endlocal
+REM pause
+EXIT
