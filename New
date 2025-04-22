@@ -1,61 +1,187 @@
-public void InitWordDocument(string sOption, string sFile)
-		{
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Configuration;
+using System.IO;
+using System.IO.Compression;
+using LogFile;
+using System.Globalization;
+using System.Net.Mail;
 
-			Object fso = new Object();
+namespace SAPInvoiceMonthlyArchive
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+                Logger.LogInfo("***** Started *****");
+                string sDate = DateTime.Now.ToString();
+                DateTime datevalue = (Convert.ToDateTime(sDate.ToString()));
+                string mn = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datevalue.Month);
+                string prevMn;
+                if (mn=="January")
+                {
+                    prevMn = "December";
+                }
+                else
+                {
+                     prevMn = CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(datevalue.Month - 1);
+                }
+               
+                //string previousMonth = DateTime.Now.AddMonths(-1).ToString("MMMM");
+               
+                string mon = mn.Substring(0, 3);
+                string prevMon = prevMn.Substring(0, 3);
+                string yy = datevalue.Year.ToString();
 
-			bool bTryAgain = true;
-			mDoc = null;
-			try
-			{
+                Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                var CreateArchive = config.AppSettings.Settings["CreateArchive"].Value;
+                var SourceFilePath = config.AppSettings.Settings["SourceFilePath"].Value;
 
-				sFile = sFile.ToUpper();
+               
 
-				if (!mdlUtil_STD.FileExists(sFile))
-				{
-					if (sFile.Substring(Math.Max(sFile.Length - 3, 0)) == "DOC")
-					{
-						sFile = sFile + "X"; //try DOCX instead
-					}
-					if (!mdlUtil_STD.FileExists(sFile))
-					{
-						if (sFile.Substring(Math.Max(sFile.Length - 4, 0)) != "DOCX")
-						{
-							sFile = sFile + ".DOC";
-							if (!mdlUtil_STD.FileExists(sFile))
-							{
-								sFile = sFile + "X";
-							}
-						}
-					}
-					if (!mdlUtil_STD.FileExists(sFile))
-					{
-						SystemSounds.Beep.Play();
-						int tempRefParam = -1;
-						int tempRefParam2 = 0;
-						mdlUtil_STD.SetStatus(ref tempRefParam, sFile + " Not Found. Unable to Print or Export.", ref tempRefParam2);
-						mdlUtil_STD.gbCancel = true;
-						MessageBox.Show(sFile + " Not Found. Unable to Print or Export.", "FILE NOT FOUND", MessageBoxButtons.OK);
-						return;
-					}
-				}
+                int i = 0;
+                if (mon != CreateArchive)
+                {
+                    if (!Directory.Exists(SourceFilePath + yy))
+                    {
+                        Directory.CreateDirectory(SourceFilePath + yy);
+                        Logger.LogInfo(SourceFilePath + yy + " directory has been created");
+                    }
+
+                    var DestinationFilePath = config.AppSettings.Settings["DestinationFilePath"].Value;
+                    if (!Directory.Exists(DestinationFilePath + yy + "/" + prevMon))
+                    {
+                        Directory.CreateDirectory(DestinationFilePath + yy + "/" + prevMon);
+                    }
+
+                    DirectoryInfo sourceinfo = new DirectoryInfo(SourceFilePath);
+                    DirectoryInfo target = new DirectoryInfo(DestinationFilePath + yy + "/" + prevMon);
+                    foreach (FileInfo fi in sourceinfo.GetFiles())
+                    {
+                        if (fi.Name.Substring(0, fi.Name.IndexOf('.')) == "PAYSP")
+                        {
+                            fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
+                            fi.Delete();
+                            Logger.LogInfo(fi.Name + " has been moved to the " + target + " and deleted from " + sourceinfo);
+                            i++;
+                        }
+                    }
+                }
+
+                else
+                {
+                    if (!Directory.Exists(SourceFilePath + (Convert.ToInt32(yy) - 1)))
+                    {
+                        Directory.CreateDirectory(SourceFilePath + (Convert.ToInt32(yy) - 1));
+                        Logger.LogInfo(SourceFilePath + (Convert.ToInt32(yy) - 1) + " directory has been created");
+                    }
+
+                    var DestinationFilePath = config.AppSettings.Settings["DestinationFilePath"].Value;
+                    if (!Directory.Exists(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon))
+                    {
+                        Directory.CreateDirectory(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon);
+                    }
+
+                    DirectoryInfo sourceinfo = new DirectoryInfo(SourceFilePath);
+                    DirectoryInfo target = new DirectoryInfo(DestinationFilePath + (Convert.ToInt32(yy) - 1) + "/" + prevMon);
+                    foreach (FileInfo fi in sourceinfo.GetFiles())
+                    {
+                        if (fi.Name.Substring(0, fi.Name.IndexOf('.')) == "PAYSP")
+                        {
+                            fi.CopyTo(Path.Combine(target.ToString(), fi.Name), true);
+                            fi.Delete();
+                            Logger.LogInfo(fi.Name + " has been moved to the " + target + " and deleted from " + sourceinfo);
+                            i++;
+                        }
+                    }
+
+                    var ZipPath = config.AppSettings.Settings["ZipPath"].Value;
+                    string startPath = SourceFilePath + (Convert.ToInt32(yy) - 1).ToString();
+                    string zipPath = ZipPath + (Convert.ToInt32(yy) - 1).ToString() + " " + "Archive.zip";
+
+                    if (Directory.Exists(startPath))
+                    {
+                        ZipFile.CreateFromDirectory(startPath, zipPath);
+                        Logger.LogInfo("Zip file has been created for " + Convert.ToString(Convert.ToInt32(yy) - 1));
+                    }
+
+                    else
+                    {
+
+                    }
+                }
+
+                string sTo = config.AppSettings.Settings["AddressTo"].Value;
+                string sFrom = config.AppSettings.Settings["AddressFrom"].Value;
+                string sSubject = config.AppSettings.Settings["Subject"].Value;
+                //string sBody = config.AppSettings.Settings["Body"].Value;
+                bool email;
+
+                if (i == 0)
+                {
+                    Logger.LogInfo("There is no file to move to the " + prevMon + " folder");
+                    email = SendEmailNotification(sTo, sFrom, sSubject, "There is no file to move to the " + prevMon + " folder");
+                }
+
+                else
+                {
+                    Logger.LogInfo("***** Sucessfully file moved to the " + prevMon + " folder *******");
+                    email = SendEmailNotification(sTo, sFrom, sSubject, "Sucessfully file moved to the " + prevMon + " folder ");
+                }
 
 
+                if (email == true)
+                {
+                    Logger.LogInfo("Email notification is sent successfully");
+                }
 
-				while(bTryAgain)
-				{
+                else
+                {
+                    Logger.LogInfo("Failed to send Email notification");
+                }
+            }
 
-					switch(sOption)
-					{
-						case "NEW" : 
-							int tempRefParam3 = -1; 
-							int tempRefParam4 = 11; 
-							mdlUtil_STD.SetStatus(ref tempRefParam3, "Attempting to load Micorsoft Word Document Template: " + sFile, ref tempRefParam4); 
-							//UPGRADE_WARNING: (1068) tempRefParam5 of type Variant is being forced to string. More Information: https://docs.mobilize.net/vbuc/ewis#1068 
-							object tempRefParam5 = sFile; 
-							object tempRefParam6 = false; 
-							object tempRefParam7 = Type.Missing; 
-							object tempRefParam8 = Type.Missing; 
-							mDoc = mWord.Documents.Add(ref tempRefParam5, ref tempRefParam6, ref tempRefParam7, ref tempRefParam8); 
-							sFile = Convert.ToString(tempRefParam5); 
-							 
-							break;
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.Message);
+            }
+        }
+
+        public static bool SendEmailNotification(string AddressTo, string AddressFrom, string Subject, string Body)
+        {
+            try
+            {
+                MailMessage mailMsg = new MailMessage();
+                MailAddress mailAddress = null;
+                mailAddress = new MailAddress(AddressFrom);
+
+                try
+                {
+                    SmtpClient smtpClient = new SmtpClient(System.Configuration.ConfigurationManager.AppSettings["SMTPServer"], Convert.ToInt32(25));
+                    System.Net.NetworkCredential credentials = new System.Net.NetworkCredential();
+                    smtpClient.Credentials = credentials;
+                    smtpClient.Send(AddressFrom, AddressTo, Subject, Body);
+                    mailMsg.Dispose();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError("Email Error for smtp: ", ex);
+                    if (mailMsg != null)
+                        mailMsg.Dispose();
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Email Error:", ex);
+                return false;
+            }
+        }
+    }
+}
