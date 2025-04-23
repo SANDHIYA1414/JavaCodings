@@ -1,17 +1,1 @@
-echo ********************** Start Job Sequence ********************** >> SAPInvoice.txt
-date /t >> SAPInvoice.txt
-SAPInvoice.exe -FPAYSP.B.TT.TTBX.CINVOICE -SPRETAPPDBSWC019 -DVMI
-
-if not exist PAYSP.B.TT.TTBX.CINVOICE GOTO TheError
-Copy D:\VMI\SAPInvoice\PAYSP.B.TT.TTBX.CINVOICE  \\smb2-rcnas02-dr.fxnas02.pge.com\esftenvprodmig-fs01\SAP\Vegmgmt\PaymentFiles\Outbound\  >> SAPInvoice.txt
-Copy D:\VMI\SAPInvoice\AP_DA_TT_IN.NOPARM.PR1.11  \\smb2-rcnas02-dr.fxnas02.pge.com\esftenvprodmig-fs01\SAP\Vegmgmt\PaymentFiles\Outbound\  >> SAPInvoice.txt
-call archive.bat
-
-goto TheEnd
-
-:TheError
-echo *** Error generating invoice file ***  File not sent to SAP! >> SAPInvoice.txt
-
-del run.flg
-:TheEnd
-
+d:\vmi\sqlexporter\sqlexporter d:\vmi\sqlexporter\config\TC_1st_Patrol_REPORT.xml
