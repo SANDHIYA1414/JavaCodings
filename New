@@ -1,84 +1,125 @@
-PrePostDate = "1/29/2019"   'Chapter 11 date
+SQL = "SELECT DataValue as 'AccountNumber' FROM InvoiceFileSettings WHERE DataField='AccountNumber';"
+SQL = SQL & "SELECT DataValue as 'CompanyCd' FROM InvoiceFileSettings WHERE DataField='CompanyCd';"
+SQL = SQL & "SELECT DataValue as 'Country' FROM InvoiceFileSettings WHERE DataField='Country';"
+SQL = SQL & "SELECT DataValue as 'Currency' FROM InvoiceFileSettings WHERE DataField='Currency';"
+SQL = SQL & "SELECT DataValue as 'DocType' FROM InvoiceFileSettings WHERE DataField='DocType';"
+SQL = SQL & "SELECT DataValue as 'FileDescription' FROM InvoiceFileSettings WHERE DataField='FileDescription';"
+SQL = SQL & "SELECT DataValue as 'FileName' FROM InvoiceFileSettings WHERE DataField='FileName';"
+SQL = SQL & "SELECT DataValue as 'PayTerms' FROM InvoiceFileSettings WHERE DataField='PayTerms';"
+SQL = SQL & "SELECT DataValue as 'ProgramName' FROM InvoiceFileSettings WHERE DataField='ProgramName'"
+Dim cmdFileSettings As New SqlCommand(SQL, cn)
+cmdFileSettings.CommandTimeout = 120
+dr = cmdFileSettings.ExecuteReader
 
-'Read command line for output filename
-For Each Arg In Environment.GetCommandLineArgs
-    'Check for filename
-    If Arg.StartsWith("-F") Or Arg.StartsWith("-f") Then
-        OutputFile = Trim(Arg.Substring(2))
-    End If
-
-    'mdmk: Logfile now hard-codeded as yymmdd-hhmmss.log
-    'If Arg.StartsWith("-L") Or Arg.StartsWith("-l") Then
-    '    LogFile = Trim(Arg.Substring(2))
-    'End If
-
-    If Arg.StartsWith("-D") Or Arg.StartsWith("-d") Then
-        DatabaseName = Trim(Arg.Substring(2))
-    End If
-
-    If Arg.StartsWith("-S") Or Arg.StartsWith("-s") Then
-        ServerName = Trim(Arg.Substring(2))
-    End If
-
-    'Check for help prompt
-    If Arg.StartsWith("-?") Or Arg.StartsWith("-h") Or Arg.StartsWith("-H") Then
-        Console.WriteLine("Format is: SAPInvoice -F<Filename> -S<Server> -D<Database> [-L]<Logfile>")
-        Console.WriteLine("-F<Filename>     Name of outputfile")
-        Console.WriteLine("-S<Server>       Server name of SQL server (7.0 or higher reqd.)")
-        Console.WriteLine("-D<Database>     Database name")
-        'Console.WriteLine("[-L]<Logfile>    Optional.  Name of file to monitor process")
-        'Logfile now hard-codeded as yymmdd-hhmmss.log
-        Console.WriteLine("-H or -?         Shows this dialog")
-        Console.WriteLine("")
-        Console.WriteLine("Example: SAPInvoice -Ssql001 -Dpubs -Fsapfile.out")
-        Console.WriteLine("Note that there are no spaces after the switch")
-        Exit Sub
-    End If
-Next 'For Each Arg In Environment.GetCommandLineArgs
-
-'Print commandline syntax and exit if something is missing
-If OutputFile = "" Or ServerName = "" Or DatabaseName = "" Then
-    Console.WriteLine("ERROR: Missing parameter")
-    Console.WriteLine("Format is: SAPInvoice -F<Filename> -S<Server> -D<Database> [-L]<Logfile>")
-    Console.WriteLine("-F<Filename>     Name of outputfile")
-    Console.WriteLine("-S<Server>       Server name of SQL server (7.0 or higher reqd.)")
-    Console.WriteLine("-D<Database>     Database name")
-    'Console.WriteLine("[-L]<Logfile>    Optional.  Name of file to monitor process")
-    Console.WriteLine("-H or -?         Shows this dialog")
-    Console.WriteLine("")
-    Console.WriteLine("Example: SAPInvoice -Ssql001 -Dpubs -Fsapfile.out")
-    Console.WriteLine("Note that there are no spaces after the switch")
+If dr.Read Then
+    AccountNumber = dr("AccountNumber")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing AccountNumber setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing AccountNumber setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
     Exit Sub
 End If
 
-'mdmk: Generate log file name as yymmdd-hhmmss.log
-'Check to make sure \Logs subdirectory exists, if not... create it
-Dim DirCheck As New System.IO.DirectoryInfo(".\Logs")
-If Not DirCheck.Exists Then
-    DirCheck.Create()
+If dr.Read Then
+    CompanyCd = dr("CompanyCd")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing CompanyCd setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing CompanyCd setting in InvoiceFileSettings table")
+    wErr.Close()
+
+    cn.Close()
+    Exit Sub
 End If
 
-'Create log file name based on date-time
-LogFile = ".\Logs\" & Format(Now, "yyMMdd-HHmmss") & ".log"
-ErrFile = ".\Logs\" & Format(Now, "yyMMdd-HHmmss") & ".err"
+If dr.Read Then
+    Country = dr("Country")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing Country setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing Country setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
 
-'Open log file
-Dim fLog As New FileInfo(LogFile)
-Dim fErr As New FileInfo(ErrFile)
-Dim wLog As StreamWriter
-Dim wErr As StreamWriter
+If dr.Read Then
+    Currency = dr("Currency")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing Currency setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing Currency setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
 
-wLog = fLog.AppendText()
-wLog.WriteLine(Now() & Chr(9) & "Process started")
-wLog.Close()
+If dr.Read Then
+    DocType = dr("DocType")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing DocType setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing DocType setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
 
-'Connect to database
-ConnectionName = "Data Source=" & ServerName & "; Integrated Security=SSPI; Initial Catalog=" & DatabaseName & ";"
-cn = New SqlConnection
-cn.ConnectionString = ConnectionName
-cn.Open()
+If dr.Read Then
+    FileDescription = dr("FileDescription")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing FileDescription setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing FileDescription setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
 
-'Open log file, if any
-wLog = fLog.AppendText
-wLog.WriteLine(Now() & Chr(9) & "Connected to " & ServerName & " -> " & DatabaseName & " database")
-wLog.Close()
+If dr.Read Then
+    FileName = dr("FileName")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing FileName setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing FileName setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
+
+If dr.Read Then
+    PayTerms = dr("PayTerms")
+    dr.NextResult()
+Else
+    wLog = fLog.AppendText
+    wLog.WriteLine(Now() & Chr(9) & "ABORT: Missing PayTerms setting in InvoiceFileSettings table")
+    wLog.Close()
+    wErr = fErr.AppendText
+    wErr.WriteLine(Now() & Chr(9) & "ABORT: Missing PayTerms setting in InvoiceFileSettings table")
+    wErr.Close()
+    cn.Close()
+    Exit Sub
+End If
