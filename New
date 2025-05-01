@@ -1,36 +1,12 @@
 
-bool hasAllAvailable = Headquarters_Information.Contains("All Available Headquarters");
-bool hasOtherHQs = Headquarters_Information.Split(',').Any(h => h.Trim() != "All Available Headquarters");
+bool hasOtherHQs = false;
+string[] arrHQs = Headquarters_Information.Split(',');
 
-if (hasAllAvailable && hasOtherHQs)
+foreach (string hq in arrHQs)
 {
-    str_Headquarters = " and 1 = 2"; // mixed selection not allowed
-}
-else if (Headquarters_Information == "All Available Headquarters" || Headquarters_Information == "")
-{
-    str_Headquarters = "";
-}
-else
-{
-    T = 0;
-    ArrHeadquarters_Information = Headquarters_Information.Split(',');
-    sql_where2 = "in(";
-
-    while (T <= ArrHeadquarters_Information.GetUpperBound(0))
+    if (hq.Trim() != "All Available Headquarters")
     {
-        string currentHeadquarter = ArrHeadquarters_Information[T].Trim();
-
-        if (!currentHeadquarter.Equals("All Available Headquarters", StringComparison.OrdinalIgnoreCase))
-        {
-            sql_where2 += currentHeadquarter + ",";
-        }
-        T++;
+        hasOtherHQs = true;
+        break;
     }
-
-    if (sql_where2.EndsWith(","))
-    {
-        sql_where2 = sql_where2.Substring(0, sql_where2.Length - 1);
-    }
-    sql_where2 += ")";
-    str_Headquarters = " and RD.HDQtrsCD " + sql_where2;
 }
