@@ -1,97 +1,133 @@
-<%@ Page language="C#" %>
-<%@ Import Namespace="Microsoft.VisualBasic" %>
-<%@ Import Namespace="System.Data" %>
-<%@ Import Namespace="System.Data.SqlClient" %>
-<%@ Import Namespace="UpgradeHelpers.Helpers" %>
-<%--<%@ Import Namespace="ADODB" %>--%>
-<%@ Import Namespace="UpgradeHelpers.DB.ADO" %>
-<%@ Import Namespace="System.Collections.Generic"%>
-
-<script language="C#" runat="Server">
-
-    //string str_Error_Message_Db = "";//
-    private static readonly log4net.ILog log=log4net.LogManager.GetLogger(typeof())
-    bool cancelRenew = false;
-    double Emp_Bid_Count = 0;
-    string Bids_Allowed = "";
-    string Union_Exempt = "";
-    object i = null;
-    string DayOfWeek = "";
-    System.DateTime CompareDate = DateTime.FromOADate(0);
-    string HolidayCompDate = "";
-    string HolidayCompDay = "";
-    short HolidayCompMonth = 0;
-    int MyWeekDay = 0;
-    bool HolidayDateSwitch = false;
-    string bidcodeslist = "";
-
-    //******* FUNCTIONS *******
-    // PAGE VARIABLES
-    string rowcnt = "";
-    decimal cnt = 0;
-    decimal Total_Bid_Count = 0;
-    decimal submitted_bid_Count = 0;
-    //Validate bid count (Existing count + Submitted Count > Exempt count)
-    public void ValidateBidCount(decimal rowcnt, string control)
+public void saveData(string BidCd, string TranType, ref string ARight)
+{
+    //CHANGE ARIGHT TO BLANK IF NULL
+    if (ARight != "X")
     {
+        ARight = " ";
+    }
+    string TranID = "";
+    //GET NEXT AVAIL TRAN_ID
+    SqlDataReader rs = null;
+    using (SqlConnection connection = new SqlConnection(connString))
+    {
+        connection.Open();
+        SqlCommand sqlCommand = new SqlCommand("EXEC dbo.getNext_TranLog_ID", connection);
 
-        decimal i = 0;
+        rs = sqlCommand.ExecuteReader();
+        rs.Read();
+        TranID = Convert.ToString(rs["ID"]);
+        rs.Close();
+
+    }//sqgd
+     //SqlCommand sqlCommand = new SqlCommand(, Session["dbCon"]);//SQGD
 
 
+    //WRITE INTO TRAN_LOG	  	  
+    DataSet rsTranLog = new DataSet();
+    using (SqlConnection connection = new SqlConnection(connString))
+    {
+        SqlCommand command = new SqlCommand("SELECT * FROM dbo.TRAN_LOG WHERE TRAN_ID = -1", connection);
+        SqlDataAdapter adap_2 = new SqlDataAdapter(command);
+        SqlCommandBuilder builder = new SqlCommandBuilder(adap_2);
 
-        while (i < rowcnt)
+
+        rsTranLog.Tables.Clear();
+        adap_2.Fill(rsTranLog);
+        if (rsTranLog.Tables.Count == 0)
         {
-
-            i++;
-            string[] checkboxValues = Request.Form.GetValues(control + i.ToString());
-
-
-            if (checkboxValues != null && checkboxValues.Length > 0)
-            {
-
-                string joinedValues = string.Join(", ", checkboxValues);
-
-
-                if (!string.IsNullOrEmpty(joinedValues))
-                {
-                    if (control != "cancel")
-                    {
-                        submitted_bid_Count++;
-                    }
-                }
-            }
-            //if (System.String.Join(", ", Request.Form[control + i.ToString()]) != "") //ayg9
-            //if (System.String.Join(", ", Request.Form.GetValues(control + i.ToString())) != "")  //ayg9
-
-            //{
-            //	if (control != "cancel")
-            //	{
-            //		submitted_bid_Count++;
-            //	}
-            //}
+            rsTranLog.Tables.Add(new DataTable());
         }
 
-        //Get Union Exempt Count
-        GetUnionExemptCount();
 
-        //Get existing bid count
-        CheckBidNumber();
+        DataTable table = rsTranLog.Tables[0];
+        DataRow newRow = table.NewRow();
 
-        //Set Total bid count
-        Total_Bid_Count = ((decimal)Emp_Bid_Count) + submitted_bid_Count;
 
-        if (Union_Exempt != "NoLimit")
+        newRow["Tran_ID"] = TranID;
+        newRow["EmpID"] = Session["strpernr"];
+        newRow["Date"] = DateTime.Now;
+        newRow["Tran_Type"] = TranType;
+        newRow["Tran_Status"] = "U";
+        newRow["Verified"] = "F";
+        newRow["Modified_By"] = Session["UserID"];
+
+
+        table.Rows.Add(newRow);
+
+        adap_2.Update(table);
+
+    }//sqgd
+     //SqlDataAdapter adap_2 = new SqlDataAdapter("SELECT * FROM dbo.TRAN_LOG WHERE TRAN_ID = -1", Session["dbCon"]);//SQGD
+
+    //UPGRADE_ISSUE: (2064) ADODB.Recordset method rsTranLog.AddNew was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.AddNew(null, null);//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Tran_ID"].Value = TranID;//sqgd
+    //rsTranLog("SSN")=  Session("strSSN")
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["EmpID"].Value = Session["strPernr"];//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Date"].Value = DateTime.Today.AddDays(DateTime.Now.ToOADate());//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Tran_Type"].Value = TranType;//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Tran_Status"].Value = "U";//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Verified"].Value = "F";//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsTranLog.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Tables[0].Rows[0]["Modified_By"].Value = Session["UserID"];//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Recordset method rsTranLog.Update was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsTranLog.Update(null, null);//sqgd
+    //UpdateTranLog rsTranLog, TranID, TranType
+
+    DataSet rsBidUpd = new DataSet();
+    using (SqlConnection connection = new SqlConnection(connString))
+    {
+        SqlCommand command = new SqlCommand("SELECT * FROM dbo.Bid_Update WHERE TRAN_ID = -1", connection);
+        SqlDataAdapter adap_2 = new SqlDataAdapter(command);
+        SqlCommandBuilder builder = new SqlCommandBuilder(adap_2);
+        rsBidUpd.Tables.Clear();
+        adap_2.Fill(rsBidUpd);
+        if (rsBidUpd.Tables.Count == 0)
         {
-            if (Total_Bid_Count > Convert.ToInt16(Double.Parse(Union_Exempt)))
-            {
-                Bids_Allowed = "No";
-            }
-            else
-            {
-                Bids_Allowed = "Yes";
-            }
+            rsBidUpd.Tables.Add(new DataTable());
         }
-        else
-        {
-            Bids_Allowed = "Yes";
-        }
+
+        DataTable table = rsBidUpd.Tables[0];
+        DataRow newRow = table.NewRow();
+
+
+        newRow["Tran_ID"] = TranID;
+        newRow["EmpID"] = Session["strpernr"];
+        //newRow["Job_Bid_Cd"] = string.Join(", ", (BidCd)); //ayg9
+
+        newRow["Job_Bid_Cd"] = BidCd; //ayg9
+                                      //newRow["Job_Change_Ind"] = string.Join(", ", Request.Form["JobChange"]); //ayg9
+        newRow["Job_Change_Ind"] = Request.Form.GetValues("JobChange"); //ayg9
+
+        newRow["Demotion_Ind"] = ARight;
+
+        table.Rows.Add(newRow);
+
+        adap_2.Update(table);
+
+    }//sqgd
+     //SqlDataAdapter adap_3 = new SqlDataAdapter("SELECT * FROM dbo.Bid_Update WHERE TRAN_ID = -1", Session["dbCon"]);//sqgd
+
+    //UPGRADE_ISSUE: (2064) ADODB.Recordset method rsBidUpd.AddNew was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.AddNew(null, null);//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsBidUpd.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Tables[0].Rows[0]["Tran_ID"].Value = TranID;//sqgd
+    //rsBidUpd("SSN")= Session("strSSN")
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsBidUpd.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Tables[0].Rows[0]["EmpID"].Value = Session["strPernr"];//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsBidUpd.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Tables[0].Rows[0]["Job_Bid_Cd"].Value = System.String.Join(", ", BidCd);//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsBidUpd.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Tables[0].Rows[0]["Job_Change_Ind"].Value = System.String.Join(", ", Request.Form["JobChange"]);//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Field20 property rsBidUpd.Value was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Tables[0].Rows[0]["Demotion_Ind"].Value = ARight;//sqgd
+    //UPGRADE_ISSUE: (2064) ADODB.Recordset method rsBidUpd.Update was not upgraded. More Information: https://docs.mobilize.net/vbuc/ewis/issues#id-2064
+    //rsBidUpd.Update(null, null);//sqgd
+    //UpdateBid rsBidUpd, TranID, BidCd, ARight
+}
