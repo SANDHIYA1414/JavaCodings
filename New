@@ -9,32 +9,7 @@
 
 <script language="C#" runat="Server">
 
-    //string str_Error_Message_Db = "";//sqgd
-
-    //********************************************************
-    //	Procedure:	verifyBid
-    //	Parameter:	Session("strSSN")
-    //				BidCd
-    //	Return:		Success Results - Message to that changes 
-    //				to the system will be made in 48 hours.
-    //				Error Results - Global error message to contact
-    //				webmaster if record set=0.
-    //	Desription:	This function processes Bid requests
-    //				in the Bid_Update table.
-    //	Note:		
-    //	Changes:
-    //				09/23/2003 GAA1 - Clone for Bid Limits
-    //				10/31/2005 R0MC - Hide navigation elements due to separate login from SAP Portal
-    //				02/23/2006 RXCA - Update query for the New SAP JOB Bidding System
-    //				04/12/2006 RXCA - Hide Left navigation elements due to separate login from SAP Portal
-    //				10/17/2007 RXCA - Change Text message per Julie Wright
-    //				02/13/2013 RXCA - Modify bid limit for IBEW Physical from 100 to 80
-    //	            05/19/2016 S3HZ - Add two text blocks before 'Return to Union Bids' button 
-    //			    05/20/2019 S6PG  - Bid Exception Changes - Use Pernr instead of SSN. Also implemented Max alloweded bid count validation.
-    //				03/03/2023 N3SF  - Fix for WO0000001565162	SAP HR (Bid Connect) - Bidder showing up multiple times on bid list
-
-    //*********************************************************
-
+    //string str_Error_Message_Db = "";//
     private static readonly log4net.ILog log=log4net.LogManager.GetLogger(typeof())
     bool cancelRenew = false;
     double Emp_Bid_Count = 0;
