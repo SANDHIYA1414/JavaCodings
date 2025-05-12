@@ -1,6 +1,17 @@
-gSystem.Text.StringBuilder sb = new System.Text.StringBuilder();
-foreach (DataColumn column in newRow.Table.Columns)
-{
-    sb.AppendFormat("{0}={1}, ", column.ColumnName, newRow[column] ?? "NULL");
-}
-log.Info("NewRow Data: " + sb.ToString().TrimEnd(',', ' '));
+echo ********************** Start Job Sequence ********************** >> SAPInvoice.txt
+date /t >> SAPInvoice.txt
+SAPInvoice.exe -FPAYSP.B.TT.TTBX.CINVOICE -STSITINFDBSWS028 -DVMI
+
+if not exist PAYSP.B.TT.TTBX.CINVOICE GOTO TheError
+Copy F:\VMI\SAPInvoice\PAYSP.B.TT.TTBX.CINVOICE  \\rcnas01-smb\apphealth\AHM-POD4\Sandhiya\outbound  >> SAPInvoice.txt
+Copy F:\VMI\SAPInvoice\AP_DA_TT_IN.NOPARM.PR1.11  \\rcnas01-smb\apphealth\AHM-POD4\Sandhiya\outbound  >> SAPInvoice.txt
+call archive.bat
+
+goto TheEnd
+
+:TheError
+echo *** Error generating invoice file ***  File not sent to SAP! >> SAPInvoice.txt
+
+del run.flg
+:TheEnd
+
