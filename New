@@ -1,9 +1,1 @@
-        
-    SELECT COUNT(*) 
-FROM InvoicePayment ip
-INNER JOIN Invoice i ON ip.InvoiceNumber = i.InvoiceNumber
-WHERE i.StatusCode = 5
-  AND ip.SAPDate IS NULL
-  AND ip.ApprovedDate IS NOT NULL
-  AND i.Source <> 'Z'
-  AND i.WeekEnding > '2021-01-01'
+f-f paysp.b.tt.ttbx.cinvoicetest.txt -s ststitinfdbsws028 -d dvmi -l sapinvoice.log
