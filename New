@@ -1,1 +1,1 @@
-f-f paysp.b.tt.ttbx.cinvoicetest.txt -s ststitinfdbsws028 -d dvmi -l sapinvoice.log
+-fpaysp.b.tt.ttbx.cinvoicetest.txt -sststitinfdbsws028 -ddvmi -lsapinvoice.log
