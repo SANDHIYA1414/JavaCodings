@@ -1,7 +1,16 @@
-declare @var1 varchar(10)  ---g1n3     
-select top 1 @var1 = parameter_value from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_NewDep_20_TelecomReviewRequired' and db = 'Engineering' and parameter='P1'  
---select @var1
 
-select @from=sent_by, @to = 'T9MR@PGE.COM', @subject='[' + @@servername + ' TEST ] ' + subject, @message=message 
-	from rm_Mail 
-	where mail_id = @mail_id
+declare @example varchar(max)
+declare @example2 varchar(max)
+Declare @var1 varchar(max)      ---k2ap    
+select top 1 @var1 = parameter_value  from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_CRS_02_TurnInRental' and db = 'crs' and parameter = 'P1'  
+Declare @var2 varchar(max)      ---k2ap    
+select top 1 @var2 = parameter_value  from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_CRS_02_TurnInRental' and db = 'crs' and parameter = 'P2'  
+Declare @var3 varchar(max)      ---k2ap    
+select top 1 @var3 = parameter_value  from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_CRS_02_TurnInRental' and db = 'crs' and parameter = 'P3'  
+Declare @var4 varchar(max)      ---k2ap    
+select top 1 @var4 = parameter_value  from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_CRS_02_TurnInRental' and db = 'crs' and parameter = 'P4'  
+ 
+set @example = 'T9MR@PGE.COM'
+set @example2 = ''''+@var1+'@PGE.COM'+''''
+select @example
+select @example2
