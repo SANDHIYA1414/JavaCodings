@@ -1,3 +1,7 @@
+declare @var1 varchar(10)  ---g1n3     
+select top 1 @var1 = parameter_value from util.dbo.MEA_Role_LANIDConfig where script_name = 'usp_NewDep_20_TelecomReviewRequired' and db = 'Engineering' and parameter='P1'  
+--select @var1
+
 select @from=sent_by, @to = 'T9MR@PGE.COM', @subject='[' + @@servername + ' TEST ] ' + subject, @message=message 
 	from rm_Mail 
 	where mail_id = @mail_id
