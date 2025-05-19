@@ -1,1 +1,3 @@
--fpaysp.b.tt.ttbx.cinvoicetest.txt -sststitinfdbsws028 -ddvmi -lsapinvoice.log
+select @from=sent_by, @to = 'T9MR@PGE.COM', @subject='[' + @@servername + ' TEST ] ' + subject, @message=message 
+	from rm_Mail 
+	where mail_id = @mail_id
