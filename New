@@ -1,2 +1,8 @@
---    select @to = 'REP9@PGE.COM' + ',' + 'EALc@PGE.COM' + ',' + 'J4TG@PGE.COM' + ',C5Sk@PGE.COM, E1Cz@PGE.COM, SARX@pge.com'
-    --select @to = 'EALc@PGE.COM, C5Sk@PGE.COM, K2CL@PGE.COM, MxKq@PGE.COM'
+Login failed for user 'NT AUTHORITY\ANONYMOUS LOGON'.
+
+LOGIN FAILURE REDIRECT
+
+Failed On: 
+
+Provider=SQLOLEDB;Database=engineering;Server=SQLASCTST108;Integrated Security=SSPI
+
