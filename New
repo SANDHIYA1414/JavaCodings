@@ -1,8 +1,33 @@
-Login failed for user 'NT AUTHORITY\ANONYMOUS LOGON'.
+Server Error in '/' Application.
+--------------------------------------------------------------------------------
 
-LOGIN FAILURE REDIRECT
+Login failed for user 'NT AUTHORITY\ANONYMOUS LOGON'. 
+Description: An unhandled exception occurred during the execution of the current web request. Please review the stack trace for more information about the error and where it originated in the code. 
 
-Failed On: 
+Exception Details: System.Data.SqlClient.SqlException: Login failed for user 'NT AUTHORITY\ANONYMOUS LOGON'.
 
-Provider=SQLOLEDB;Database=engineering;Server=SQLASCTST108;Integrated Security=SSPI
+Source Error: 
 
+An unhandled exception was generated during the execution of the current web request. Information regarding the origin and location of the exception can be identified using the exception stack trace below.  
+
+Stack Trace: 
+
+
+[SqlException (0x80131904): Login failed for user 'NT AUTHORITY\ANONYMOUS LOGON'.]
+   System.Data.SqlClient.SqlInternalConnectionTds..ctor(DbConnectionPoolIdentity identity, SqlConnectionString connectionOptions, SqlCredential credential, Object providerInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString userConnectionOptions, SessionData reconnectSessionData, DbConnectionPool pool, String accessToken, Boolean applyTransientFaultHandling, SqlAuthenticationProviderManager sqlAuthProviderManager) +1480
+   System.Data.SqlClient.SqlConnectionFactory.CreateConnection(DbConnectionOptions options, DbConnectionPoolKey poolKey, Object poolGroupProviderInfo, DbConnectionPool pool, DbConnection owningConnection, DbConnectionOptions userOptions) +1149
+   System.Data.ProviderBase.DbConnectionFactory.CreatePooledConnection(DbConnectionPool pool, DbConnection owningObject, DbConnectionOptions options, DbConnectionPoolKey poolKey, DbConnectionOptions userOptions) +70
+   System.Data.ProviderBase.DbConnectionPool.CreateObject(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection) +1134
+   System.Data.ProviderBase.DbConnectionPool.UserCreateRequest(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection) +103
+   System.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, UInt32 waitForMultipleObjectsTimeout, Boolean allowCreate, Boolean onlyOneCheckConnection, DbConnectionOptions userOptions, DbConnectionInternal& connection) +1595
+   System.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, TaskCompletionSource`1 retry, DbConnectionOptions userOptions, DbConnectionInternal& connection) +159
+   System.Data.ProviderBase.DbConnectionFactory.TryGetConnection(DbConnection owningConnection, TaskCompletionSource`1 retry, DbConnectionOptions userOptions, DbConnectionInternal oldConnection, DbConnectionInternal& connection) +382
+   System.Data.ProviderBase.DbConnectionInternal.TryOpenConnectionInternal(DbConnection outerConnection, DbConnectionFactory connectionFactory, TaskCompletionSource`1 retry, DbConnectionOptions userOptions) +307
+   System.Data.SqlClient.SqlConnection.TryOpenInner(TaskCompletionSource`1 retry) +198
+   System.Data.SqlClient.SqlConnection.TryOpen(TaskCompletionSource`1 retry) +422
+   System.Data.SqlClient.SqlConnection.Open() +699
+   NewDep.UtilSQL.CheckConnection() in C:\Users\SQGD\source\repos\newdep\UtilSQL.vb:31
+   NewDep.frmSelect.Page_Load(Object sender, EventArgs e) in C:\Users\SQGD\source\repos\newdep\frmSelect.aspx.vb:44
+   System.Web.UI.Control.OnLoad(EventArgs e) +99
+   System.Web.UI.Control.LoadRecursive() +154
+   System.Web.UI.Page.ProcessRequestMain(Boolean includeStagesBeforeAsyncPoint, Boolean includeStagesAfterAsyncPoint) +4082 
