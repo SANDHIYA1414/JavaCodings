@@ -1,38 +1,31 @@
-DECLARE @SearchString NVARCHAR(100) = 'MAV4'; -- Replace with your dynamic value
+DECLARE @SearchString NVARCHAR(100) = '''syst''';
 DECLARE @SQL NVARCHAR(MAX);
- 
--- Create a temporary table to store results
+
 IF OBJECT_ID('tempdb..#Results') IS NOT NULL
-   DROP TABLE #Results;
- 
+    DROP TABLE #Results;
+
 CREATE TABLE #Results (
-   DatabaseName NVARCHAR(128),
-   ProcedureName NVARCHAR(128),
-   ProcedureDefinition NVARCHAR(MAX)
+    DatabaseName NVARCHAR(128),
+    ProcedureName NVARCHAR(128),
+    ProcedureDefinition NVARCHAR(MAX)
 );
- 
+
 SET @SQL = '';
- 
--- Iterate through all databases and insert results into the temporary table
+
 SELECT @SQL = @SQL + '
 USE [' + name + '];
 INSERT INTO #Results
 SELECT ''' + name + ''' AS DatabaseName, 
-      OBJECT_NAME(m.object_id) AS ProcedureName, 
-      m.definition AS ProcedureDefinition
+       OBJECT_NAME(m.object_id) AS ProcedureName, 
+       m.definition AS ProcedureDefinition
 FROM sys.sql_modules m
 INNER JOIN sys.objects o ON m.object_id = o.object_id
-WHERE o.type = ''P'' AND m.definition LIKE ''%' + @SearchString + '%'';
-'
+WHERE o.type = ''P'' AND m.definition LIKE N''%' + REPLACE(@SearchString, '''', '''''') + '%'';'
 FROM sys.databases
-WHERE state_desc = 'ONLINE'; -- Only include online databases
- 
--- Execute the dynamic SQL
+WHERE state_desc = 'ONLINE';
+
+-- Run the dynamic SQL
 EXEC sp_executesql @SQL;
- 
--- Retrieve all results from the temporary table
+
+-- View results
 SELECT * FROM #Results;
- 
--- Optional: Drop the temporary table
--- DROP TABLE #Results;
- 
