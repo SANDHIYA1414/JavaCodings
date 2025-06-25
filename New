@@ -100,39 +100,7 @@ BEGIN
 
 	INSERT INTO tbl_SafetyIncidentsPYFull ([SafetyIncPYFull_SEMSID]
 										  ,[SafetyIncPYFull_Incident Date]
-										  ,[SafetyIncPYFull_Case Report Date]
-										  ,[SafetyIncPYFull_PCC]
-										  ,[SafetyIncPYFull_SupervisorLANID]
-										  ,[SafetyIncPYFull_SupervisorName]
-										  ,[SafetyIncPYFull_LOB]
-										  ,[SafetyIncPYFull_Work Unit Group]
-										  ,[SafetyIncPYFull_Work Unit]
-										  ,[SafetyIncPYFull_Work Unit Subgroup]
-										  ,[SafetyIncPYFull_BudgetLevel5]
-										  ,[SafetyIncPYFull_BudgetLevel6]
-										  ,[SafetyIncPYFull_Incident Type]
-										  ,[SafetyIncPYFull_IncidentDescription]
-										  ,[SafetyIncPYFull_LostWorkDays]
-										  ,[SafetyIncPYFull_NatureShort]
-										  ,[SafetyIncPYFull_Preventability]
-										  ,[SafetyIncPYFull_RestrictedDutyDays]
-										  ,[SafetyIncPYFull_SIFClassification]
-										  ,[SafetyIncPYFull_ClassificationDate]
-										  ,[SafetyIncPYFull_PMVIDate]
-										  ,[SafetyIncPYFull_SPMVIDate]
-										  ,[SafetyIncPYFull_OSHADate]
-										  ,[SafetyIncPYFull_RestrictedDutyDate]
-										  ,[SafetyIncPYFull_LWDDate]
-										  ,[SafetyIncPYFull_DARTDate]
-										  ,[SafetyIncPYFull_SelfCare]
-										  ,[SafetyIncPYFull_Timely Report]
-										  ,[SafetyIncPYFull_PMVI]
-										  ,[SafetyIncPYFull_SPMVI]
-										  ,[SafetyIncPYFull_OSHA]
-										  ,[SafetyIncPYFull_LWD]
-										  ,[SafetyIncPYFull_DART]
-										  ,[SafetyIncPYFull_SIF P]
-										  ,[SafetyIncPYFull_Classification Week]
+									
 										  ,[SafetyIncPYFull_NPMVI]
 										  ,[SafetyIncPYFull_LoadDt])
 	SELECT   T1.[SEMSID]
@@ -144,17 +112,7 @@ BEGIN
 			,T3.[LOB]
 			,T3.[Work Unit Group]
 			,T3.[Work Unit]
-			,T3.[Work Unit Subgroup]
-			,T3.[BudgetLevel5]
-			,T3.[BudgetLevel6]
-			,T1.[Incident Type]
-			,CASE WHEN T2.[NatureShort] LIKE 'Confidential' THEN NULL 
-				  ELSE T2.[IncidentDescription] END AS [IncidentDescription]
-			,T2.[LostWorkDays]
-			,T2.[NatureShort]
-			,[Preventability]
-			,[RestrictedDutyDays]
-			,[SIFClassification]
+	
 			,T1.[ClassificationDate]
 			,[PMVIDate]
 			,[SPMVIDate]
@@ -168,15 +126,7 @@ BEGIN
 				  ELSE 0 END AS [SelfCare]
 			,CASE WHEN T1.[IncidentDate]=[WORKCAREDATE] THEN 1 
 				  WHEN T1.[IncidentDate]=DATEADD(day,-1,[WorkCareDate]) THEN 1  
-				  ELSE 0 END AS [Timely Report]
-			,CASE WHEN T1.[Incident Type] = 'PMVI' THEN 1 
-				  ELSE NULL END AS [PMVI]
-			,CASE WHEN T1.[Incident Type] = 'SPMVI' THEN 1 
-				  ELSE NULL END AS [SPMVI]
-			,CASE WHEN T1.[Incident Type] = 'OSHA' THEN 1 
-			      ELSE NULL END AS [OSHA]
-			,CASE WHEN T1.[Incident Type] = 'LWD' THEN 1 
-				  ELSE NULL END AS [LWD]
+		
 			,CASE WHEN T1.[Incident Type] = 'DART' THEN 1 
 				  ELSE NULL END AS [DART]
 			,CASE WHEN [SIFClassification] = 'SIF Potential' THEN 1 
