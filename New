@@ -1,6 +1,6 @@
 USE [DETEP]
 GO
-/****** Object:  StoredProcedure [dbo].[update_rpt_Schedule_Summary]    Script Date: 6/24/2025 10:54:58 PM ******/
+/****** Object:  StoredProcedure [dbo].[update_SafetyDataPYFull]    Script Date: 6/24/2025 11:06:55 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -8,7 +8,8 @@ GO
 
 
 
-ALTER PROCEDURE [dbo].[update_rpt_Schedule_Summary]
+
+ALTER PROCEDURE [dbo].[update_SafetyDataPYFull]
 
 AS
 BEGIN
@@ -17,325 +18,184 @@ BEGIN
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON
 
+-- =============================================
+-- Truncate prior year full safety data tables
+-- =============================================
 
---------------------------------------------------------------------------------------------------------------------------
-	
--- Create temp table with distinct order list	
+	TRUNCATE TABLE tbl_SafetyIncidentsPYFull
 
---------------------------------------------------------------------------------------------------------------------------
+-- =============================================
+-- Initialize variables
+-- =============================================
 
-	IF OBJECT_ID('tempdb..#OrderList') IS NOT NULL
-		DROP TABLE #OrderList
+	DECLARE @CurrYear int
+	SET @CurrYear = 2025
 
-	SELECT * INTO #OrderList
-	FROM (SELECT DISTINCT Click_Order AS PM
-		  FROM tbl_Click Clk
-		  LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
-		  NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)))
-	  
-		  UNION
-	  
-		  SELECT DISTINCT MC90Day_Order
-		  FROM tbl_MC90Day
-		  WHERE MC90Day_Order IS NOT NULL
+	DECLARE @PriorYear int
+	SET @PriorYear = @CurrYear - 1
 
-		  UNION
-	  
-		  SELECT DISTINCT TRY_CONVERT(int,P6RTU_ProjectID)
-		  FROM tbl_P6_SCADA
-		  WHERE P6RTU_ProjectID IS NOT NULL
-		  
-		  UNION
+	DECLARE @CurrMonth int
+	SET @CurrMonth = MONTH(GETDATE())
 
-		  SELECT DISTINCT Click_Order
-		  FROM tbl_WorkToSchedule) A
+	DECLARE @SnapshotCY date
+	SET @SnapshotCY = concat(year(getdate()), '-', month(getdate()),'-01')
 
-	--SELECT * FROM #OrderList
+	DECLARE @SnapshotLY date
+	SET @SnapshotLY = concat((year(getdate()) - 1), '-', month(getdate()),'-01')
 
---------------------------------------------------------------------------------------------------------------------------
-	
--- Get crew information from various sources
+-- =============================================
+-- Create Temp tables to speed up process?
+-- =============================================
 
---------------------------------------------------------------------------------------------------------------------------
+	--PCC table
 
-	-- Join Work to Schedule table with Salesforce to give preference to operations when primary resource is flagged
-
-	IF OBJECT_ID('tempdb..#WTS') IS NOT NULL
-		DROP TABLE #WTS
-
-	SELECT * INTO #WTS
-	FROM (SELECT a.Click_Order
-				  ,Click_Crew_Individual_Name
-				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
-						WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
-					 
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
-						ELSE [2ndResource] END AS WTSCrewType
-				  ,CASE WHEN SchedDt_Override = 1 THEN Click_Assignment_StartDate
-						ELSE NULL END AS WTS_StDate
-				  ,CASE WHEN SchedDt_Override = 1 THEN  Click_Assignment_End_Date
-						ELSE NULL END AS WTS_EndDate --only pull dates from matching salesforce operation if dates will override (as opposed to summary of dates
-			FROM tbl_WorkToSchedule a
-			INNER JOIN tbl_Click b ON b.Click_Order = a.Click_Order
-										AND b.Click_Operation_Task_Number = a.OperationNumber
-			INNER JOIN tbl_PMHeader ON PMHeader_PM_NUM = a.Click_Order
-			WHERE Primary_Resource = 1
-			AND a.Click_Order IS NOT NULL
-			AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM') --Slamshuts excluded as data is in P6
-			
-			
-			UNION
-
-			-- This section brings in orders where Jesse has allocated a resource in the Work to Schedule table, but they aren't scheduled
-
-			SELECT a.Click_Order
-				  ,NULL
-				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
-					  
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
-					    ELSE [2ndResource] END AS WTSCrewType
-				  ,NULL
-				  ,NULL
-			FROM tbl_WorkToSchedule a
-			INNER JOIN tbl_PMHeader ON PMHeader_PM_NUM = a.Click_Order
-			LEFT JOIN tbl_Click b ON b.Click_Order = a.Click_Order 
-			WHERE 1 = 1
-			AND b.Click_Order IS NULL
-			AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
-			) WTS  
-
-	-- Pull summary dates from Salesforce
-
-	IF OBJECT_ID('tempdb..#K1') IS NOT NULL
-    DROP TABLE #K1
-
-	IF OBJECT_ID('tempdb..#K') IS NOT NULL
-    DROP TABLE #K
+	IF OBJECT_ID('tempdb..#PCC') IS NOT NULL
+	DROP TABLE #PCC
 
 	SELECT *
-	INTO #K1
-	FROM (SELECT  C1.Click_Order AS PM
-				, C1.Click_Crew_Individual_Name AS CrewName
-				, CASE WHEN C1.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
-					   --WHEN C1.Click_Crew_Individual_Name LIKE '%Mechanic%' THEN 'Mechanic'
-					 
-					   ELSE tbl_Crew_Class_Click.Crew_Class_Category END AS CrewCat
-		  FROM (SELECT Min(Clk.Click_ID) AS ID
-				FROM tbl_Click AS Clk
-				INNER JOIN (SELECT  tbl_Click.Click_Order AS PM
-								  , Min(tbl_Click.Click_Assignment_StartDate) AS MinStDt
-							FROM tbl_Click
-							LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = tbl_Click.Click_Crew_Class
-							GROUP BY  tbl_Click.Click_Order
-									, tbl_Click.Click_Crew_Assignment
-									,tbl_Click.Click_Crew_Individual_Name
-									,tbl_Click.Click_CurrentRecord
-									,tbl_Click.Click_Crew_Class
-									,tbl_Crew_Class_Click.Crew_Class_Category
-							HAVING 
-							--tbl_Click.Click_Crew_Assignment='X'
-							( AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
-							)  AS MinSt ON Clk.Click_Assignment_StartDate = MinSt.MinStDt AND Clk.Click_Order = MinSt.PM
-				LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
-				WHERE 
-				--Clk.Click_Crew_Assignment='X'
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Div G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
-				(( AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1))
-				GROUP BY Clk.Click_Order)  AS ClickID 
-			INNER JOIN tbl_Click AS C1 ON ClickID.ID = C1.Click_ID 
-			LEFT JOIN tbl_Crew_Class_Click ON C1.Click_Crew_Class = tbl_Crew_Class_Click.Crew_Class_Crew_Class) K1
+	INTO #PCC
+	FROM (SELECT *
+		  FROM [pritinfdbswx158].[SafetyDashboard].[dbo].[vw_PCCHierarchy]
+		  WHERE [Work Unit Group] IN ('Gas Operations', 'Operations Support')
+		  OR [Work Unit] = 'Corporate Real Estate') P
+
+	-- select * from #pcc
+
+	IF OBJECT_ID('tempdb..#Incidents') IS NOT NULL
+	DROP TABLE #Incidents
 
 	SELECT *
-	INTO #K
-	FROM (SELECT  #K1.PM
-			    , #K1.CrewName
-				, #K1.CrewCat
-		  FROM #K1
-		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = PM
-		  WHERE ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
+	INTO #Incidents
+	FROM (SELECT *
+		  FROM [pritinfdbswx158].[SafetyDashboard].[dbo].[vw_SEMSIncidentsLOB]
+		  WHERE YEAR([ClassificationDate]) = @PriorYear
+		  AND [Snapshot] = @SnapshotCY)I
 
-		  UNION
-		  SELECT  tbl_MC90Day.MC90Day_Order
-				, tbl_MC90Day.MC90Day_Crew
-				, 'M&C' AS CrewCat
-		  FROM tbl_MC90Day
-		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = MC90Day_Order
-		  WHERE tbl_MC90Day.MC90Day_Order NOT IN (SELECT #K1.PM FROM #K1)
-		  AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
-		 ) K
+	--select * from #incidents
 
+	IF OBJECT_ID('tempdb..#SEMSID') IS NOT NULL
+	DROP TABLE #SEMSID
 
--- Set up Slam Shut Schedule Data
-
-	IF OBJECT_ID('tempdb..#P6cte') IS NOT NULL
-		DROP TABLE #P6cte
-
-	SELECT * INTO #P6cte 
-	FROM(SELECT [P6RTU_ProjectID]
-				,[CivilStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6a-Civil' THEN [P6RTU_Start] END)
-				,[M&CElectStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6h-SS M&C' THEN [P6RTU_Start] END)
-				,[SSInstallFinish] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '8b-CFCO' THEN [P6RTU_Finish] END)
-		 FROM [DETEP].[dbo].[tbl_P6_SCADA]
-		 WHERE [P6RTU_SCADA-Summary] IN ( '6a-Civil'
-									     ,'6h-SS M&C'
-										 ,'8b-CFCO')
-		 GROUP BY [P6RTU_ProjectID]
-		 )P6CTE
+	SELECT *
+	INTO #SEMSID
+	FROM (SELECT SEMSID
+		  FROM #Incidents
+		  INNER JOIN #PCC ON #PCC.PCC = #Incidents.PCC) S
 
 
+	IF OBJECT_ID('tempdb..#Details') IS NOT NULL
+	DROP TABLE #Details
 
-	IF OBJECT_ID('tempdb..#P6cteRTU') IS NOT NULL
-		DROP TABLE #P6cteRTU
-		 
-	SELECT * INTO #P6cteRTU 
-	FROM (SELECT [P6RTU_ProjectID]
-				,[RTUCivilStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6a-Civil' THEN [P6RTU_Start] END)
-				,[RTUFCOFinish] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '8b-CFCO' THEN [P6RTU_Finish] END)
-		  FROM [DETEP].[dbo].[tbl_P6_SCADA]
-		  WHERE [P6RTU_SCADA-Summary] IN ( '6a-Civil'
-										  ,'8b-CFCO')
-		  GROUP BY [P6RTU_ProjectID]
-		 )P6CTERTU
+	SELECT *
+	INTO #Details
+	FROM (SELECT *
+		  FROM [pritinfdbswx158].[SafetyDashboard].[dbo].[vw_SEMSDetails]
+		  WHERE [SEMSID] IN (SELECT [SEMSID] FROM #SEMSID))D 
 
---Final P6 query to combine Slam Shut and RTU Data
+-- =============================================
+-- Append data from safety server into individual tables
+-- =============================================
 
-	IF OBJECT_ID('tempdb..#SCADA') IS NOT NULL
-		DROP TABLE #SCADA
+----Update incidents-----------------------------------------------------------------------------------------------------------------
 
-	SELECT * INTO #SCADA
-	FROM (
-			--Slam Shuts
+	INSERT INTO tbl_SafetyIncidentsPYFull ([SafetyIncPYFull_SEMSID]
+										  ,[SafetyIncPYFull_Incident Date]
+										  ,[SafetyIncPYFull_Case Report Date]
+										  ,[SafetyIncPYFull_PCC]
+										  ,[SafetyIncPYFull_SupervisorLANID]
+										  ,[SafetyIncPYFull_SupervisorName]
+										  ,[SafetyIncPYFull_LOB]
+										  ,[SafetyIncPYFull_Work Unit Group]
+										  ,[SafetyIncPYFull_Work Unit]
+										  ,[SafetyIncPYFull_Work Unit Subgroup]
+										  ,[SafetyIncPYFull_BudgetLevel5]
+										  ,[SafetyIncPYFull_BudgetLevel6]
+										  ,[SafetyIncPYFull_Incident Type]
+										  ,[SafetyIncPYFull_IncidentDescription]
+										  ,[SafetyIncPYFull_LostWorkDays]
+										  ,[SafetyIncPYFull_NatureShort]
+										  ,[SafetyIncPYFull_Preventability]
+										  ,[SafetyIncPYFull_RestrictedDutyDays]
+										  ,[SafetyIncPYFull_SIFClassification]
+										  ,[SafetyIncPYFull_ClassificationDate]
+										  ,[SafetyIncPYFull_PMVIDate]
+										  ,[SafetyIncPYFull_SPMVIDate]
+										  ,[SafetyIncPYFull_OSHADate]
+										  ,[SafetyIncPYFull_RestrictedDutyDate]
+										  ,[SafetyIncPYFull_LWDDate]
+										  ,[SafetyIncPYFull_DARTDate]
+										  ,[SafetyIncPYFull_SelfCare]
+										  ,[SafetyIncPYFull_Timely Report]
+										  ,[SafetyIncPYFull_PMVI]
+										  ,[SafetyIncPYFull_SPMVI]
+										  ,[SafetyIncPYFull_OSHA]
+										  ,[SafetyIncPYFull_LWD]
+										  ,[SafetyIncPYFull_DART]
+										  ,[SafetyIncPYFull_SIF P]
+										  ,[SafetyIncPYFull_Classification Week]
+										  ,[SafetyIncPYFull_NPMVI]
+										  ,[SafetyIncPYFull_LoadDt])
+	SELECT   T1.[SEMSID]
+			,T1.[IncidentDate] AS [Incident Date]
+			,[WorkCareDate] AS [Case Report Date]
+			,T1.[PCC]
+			,T1.[SupervisorLANID]
+			,T1.[SupervisorName]
+			,T3.[LOB]
+			,T3.[Work Unit Group]
+			,T3.[Work Unit]
+			,T3.[Work Unit Subgroup]
+			,T3.[BudgetLevel5]
+			,T3.[BudgetLevel6]
+			,T1.[Incident Type]
+			,CASE WHEN T2.[NatureShort] LIKE 'Confidential' THEN NULL 
+				  ELSE T2.[IncidentDescription] END AS [IncidentDescription]
+			,T2.[LostWorkDays]
+			,T2.[NatureShort]
+			,[Preventability]
+			,[RestrictedDutyDays]
+			,[SIFClassification]
+			,T1.[ClassificationDate]
+			,[PMVIDate]
+			,[SPMVIDate]
+			,[OSHADate]
+			,[RestrictedDutyDate]
+			,[LWDDate]
+			,[DARTDate]
+			,CASE WHEN (T1.[Incident Type]='Selfcare' AND YEAR(T1.[IncidentDate])= @PriorYear AND [ValidTimelyRecord]=1) then 1 
+				  WHEN (T1.[Incident Type] LIKE 'NonOSHADrVisit' AND T2.[NatureShort] NOT LIKE 'Confidential'AND YEAR(T1.[IncidentDate])=@PriorYear AND [ValidTimelyRecord]=1) then 1 
+				  WHEN (T1.[Incident Type] = 'OSHA' AND YEAR(T1.[IncidentDate])=@PriorYear AND [ValidTimelyRecord]=1) THEN 1 
+				  ELSE 0 END AS [SelfCare]
+			,CASE WHEN T1.[IncidentDate]=[WORKCAREDATE] THEN 1 
+				  WHEN T1.[IncidentDate]=DATEADD(day,-1,[WorkCareDate]) THEN 1  
+				  ELSE 0 END AS [Timely Report]
+			,CASE WHEN T1.[Incident Type] = 'PMVI' THEN 1 
+				  ELSE NULL END AS [PMVI]
+			,CASE WHEN T1.[Incident Type] = 'SPMVI' THEN 1 
+				  ELSE NULL END AS [SPMVI]
+			,CASE WHEN T1.[Incident Type] = 'OSHA' THEN 1 
+			      ELSE NULL END AS [OSHA]
+			,CASE WHEN T1.[Incident Type] = 'LWD' THEN 1 
+				  ELSE NULL END AS [LWD]
+			,CASE WHEN T1.[Incident Type] = 'DART' THEN 1 
+				  ELSE NULL END AS [DART]
+			,CASE WHEN [SIFClassification] = 'SIF Potential' THEN 1 
+				  ELSE Null END AS [SIF P]
+		    ,DATEPART(wk,T1.classificationdate) as [Classification Week]
+			,CASE WHEN T1.[Incident Type] IN ('MVI','SNP') THEN 1 
+				  ELSE NULL END AS [NPMVI]
+			,getdate() as LoadDt
+	FROM #Incidents T1
+	LEFT JOIN #Details T2 ON T1.[SEMSID]=T2.[SEMSID]
+	LEFT JOIN #PCC T3 ON T1.[PCC]=T3.[PCC]
+	WHERE 1 = 1
+	--AND YEAR(T1.[ClassificationDate]) = @PriorYear
+	--AND T2.[NatureShort] NOT LIKE 'Confidential'
+	AND (YEAR([WorkCareDate]) = @PriorYear OR [WorkCareDate] IS NULL)
+	--AND T1.[Snapshot] = @SnapshotCY
+	AND year(T1.[IncidentDate]) = @PriorYear
 
-			SELECT  a.PMHeader_PM_NUM AS PM
-				   ,PMHeader_PM_MAT AS MAT
-				
-						  WHEN RIGHT([SSInstallFinish],1) = '*' THEN RTRIM(SUBSTRING([SSInstallFinish],1,LEN([SSInstallFinish])-1))
-						  ELSE [SSInstallFinish] END AS 'DateSchedEnd'
-			FROM tbl_PMHeader a
-			LEFT JOIN (SELECT PMHeader_PM_NUM
-							 ,PMHeader_FunctionalLocation
-					   FROM tbl_PMHeader
-					   WHERE PMHeader_PM_MAT = '4AM')PMH ON PMH.PMHeader_FunctionalLocation = a.PMHeader_FunctionalLocation
-			LEFT JOIN #P6cte ON TRY_CONVERT(int,#P6cte.P6RTU_ProjectID) = a.PMHeader_PM_NUM
-			LEFT JOIN #P6cteRTU ON TRY_CONVERT(int,#P6cteRTU.P6RTU_ProjectID) = PMH.PMHeader_PM_NUM
-			WHERE PMHeader_PM_MAT = '50N'
 			
-			-- RTUs
-
-			UNION
-
-			SELECT PM.PMHeader_PM_NUM
-				  ,PM.PMHeader_PM_MAT
-				  ,'SCADA' AS CrewType
-				 
-			FROM tbl_PMHeader PM
-			LEFT JOIN #P6cteRTU ON TRY_CONVERT(int,#P6cteRTU.P6RTU_ProjectID) = pm.PMHeader_PM_NUM
-			WHERE PM.PMHeader_PM_MAT = '4AM' 
-			) SCADA
-
-	--select * from #SCADA
-	
---------------------------------------------------------------------------------------------------------------------------
-	
--- Get summary dates	
-
---------------------------------------------------------------------------------------------------------------------------
-
-	-------------------------------------Get summary dates from click-----------------------------------------------------
-
-	IF OBJECT_ID('tempdb..#H') IS NOT NULL
-    DROP TABLE #H
-	IF OBJECT_ID('tempdb..#H1') IS NOT NULL
-    DROP TABLE #H1
-
-	SELECT * INTO #H1
-	FROM (SELECT tbl_Click.Click_Order
-			    ,PMHeader_PM_MAT
-				,Min(tbl_Click.Click_Assignment_StartDate) AS MinOfClick_Assignment_StartDate
-				,Max(tbl_Click.Click_Assignment_End_Date) AS MaxOfClick_Assignment_End_Date
-		  FROM tbl_Click
-		 AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
-		  GROUP BY tbl_Click.Click_Order
-		          ,PMHeader_PM_MAT
-		  HAVING Min(tbl_Click.Click_Assignment_StartDate) IS NOT NULL) H1
-
-
-	SELECT * INTO #H
-	FROM (SELECT  #H1.Click_Order
-			    , #H1.MinOfClick_Assignment_StartDate
-				, #H1.MaxOfClick_Assignment_End_Date
-		  FROM #H1
-		  WHERE ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
-
-		  UNION 
-		  
-		  SELECT  tbl_MC90Day.MC90Day_Order
-				, tbl_MC90Day.MC90Day_StartDate
-				, tbl_MC90Day.MC90Day_EndDate 
-		  FROM tbl_MC90Day
-		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = MC90Day_Order
-		  WHERE tbl_MC90Day.MC90Day_Order NOT IN (SELECT #H1.Click_Order FROM #H1)
-		  AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')) H
-
---------------------------------------------------------------------------------------------------------------------------
-	
--- Prepare final output to load	
-
---------------------------------------------------------------------------------------------------------------------------
-
-	IF OBJECT_ID('tempdb..#Final') IS NOT NULL
-		DROP TABLE #Final
-
-	SELECT * INTO #Final 
-	FROM (SELECT #OrderList.PM
-				
-	LEFT JOIN #WTS ON #WTS.Click_Order = PM
-	LEFT JOIN #K ON #K.PM = #OrderList.PM
-	LEFT JOIN #H ON #H.Click_Order = #OrderList.PM
-	LEFT JOIN (SELECT PM
-					
-			   GROUP BY PM) S ON S.PM = #OrderList.PM) FINAL
-
-	--select * from #final
-
--- =============================================
--- Truncate table
--- =============================================
-
-	TRUNCATE TABLE rpt_Schedule_Summary
-
-
--- =============================================
--- Insert query
--- =============================================
-	INSERT INTO rpt_Schedule_Summary (	 [Sched_PM]
-										,[Sched_Crew]
-										,[Sched_CrewType]
-										,[Sched_StartDate]
-										,[Sched_EndDate])
-	SELECT PM
-		  ,MAX(Crew) AS Crew
-		  ,MAX(CrewType) AS CrewType
-		  ,MAX(Sched_ST_Date) AS Sched_St_Date
-		  ,MAX(Sched_End_Date) AS Sched_End_Date
-	FROM #Final
-	WHERE PM IS NOT NULL
-	AND (Crew IS NOT NULL
-	     OR CrewType IS NOT NULL
-	     OR Sched_ST_Date IS NOT NULL
-	     OR Sched_End_Date IS NOT NULL)
-	GROUP BY PM
-
--- =============================================
--- Update Query to take care of M&C 90 Day 
--- =============================================
-
-	UPDATE rpt_Schedule_Summary
-	SET [Sched_CrewType] = 'M&C'
-	WHERE Sched_Crew = 'M&C - 90 Day Plan'
-
 -- =============================================
 -- Append SAP Audit log with log information
 -- =============================================
@@ -343,30 +203,26 @@ BEGIN
 	INSERT INTO DETEP.dbo.tbl_SAP_AuditLog (  SAPAudit_Table
 											, SAPAudit_UpDateDt
 											, SAPAudit_LANID, UpdateDate, ProcedureName)
-	VALUES( 'rpt_Schedule_Summary ver: 04/13/2023'
-		   , CONVERT(decimal(12, 7), GETDATE()) + 2 --convert this date numerical value to Excel Serial Number equivalent.
-		   , UPPER(SYSTEM_USER), getdate(), OBJECT_NAME(@@PROCID))
+	VALUES ( 'tbl_SafetyIncidentsPYFull ver: 02/28/2022'
+		    , CONVERT(decimal(12, 7), GETDATE()) + 2 --convert this date numerical value to Excel Serial Number equivalent.
+		    , UPPER(SYSTEM_USER), getdate(), OBJECT_NAME(@@PROCID))
 
 -- =============================================
 -- Send out notification email
 -- =============================================
 
-	--DECLARE @EmailSubject AS varchar(230);
- --       set @EmailSubject = 'rpt_Schedule_Summary has been updated'
+	DECLARE @EmailSubject AS varchar(230);
+        set @EmailSubject = 'Safety Prior Year Full Data has been updated'
 
-	--	EXEC msdb.dbo.sp_send_dbmail
-	--	@profile_name = 'DETEP account',
-	--	@recipients=N'CXU8@pge.com',
-	--	@subject =@EmailSubject,
-	--	@exclude_query_output = 1,
-	--	@query_result_header = 1; 
+		EXEC msdb.dbo.sp_send_dbmail
+		@profile_name = 'DETEP account',
+		@recipients=N'NXLU@pge.com;JX3M@pge.com',
+		@subject =@EmailSubject,
+		@exclude_query_output = 1,
+		@query_result_header = 1; 
 
-
-
-
---EXEC [dbo].[update_rpt_Schedule_Summary]
+	--EXEC update_SafetyDataPYFull
 
 
 END
-
 
