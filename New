@@ -31,14 +31,7 @@ BEGIN
 	FROM (SELECT DISTINCT Click_Order AS PM
 		  FROM tbl_Click Clk
 		  LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
-		  WHERE Click_Order IS NOT NULL AND
-		        Clk.Click_Crew_Individual_Name NOT LIKE '%Mechanic%' AND
-				--Clk.Click_Crew_Assignment='X'
-				((((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Div G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
-				(((Clk.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)))
+		  NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)))
 	  
 		  UNION
 	  
@@ -76,13 +69,7 @@ BEGIN
 				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
 						WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
 					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GC GD%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV D%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
+					 
 					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
 						ELSE [2ndResource] END AS WTSCrewType
 				  ,CASE WHEN SchedDt_Override = 1 THEN Click_Assignment_StartDate
@@ -106,14 +93,7 @@ BEGIN
 				  ,NULL
 				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
 					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GC GD%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV D%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
-					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
+					  
 					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
 					    ELSE [2ndResource] END AS WTSCrewType
 				  ,NULL
@@ -140,15 +120,7 @@ BEGIN
 				, C1.Click_Crew_Individual_Name AS CrewName
 				, CASE WHEN C1.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
 					   --WHEN C1.Click_Crew_Individual_Name LIKE '%Mechanic%' THEN 'Mechanic'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%GC GD%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV D%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
-					   WHEN C1.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
+					 
 					   ELSE tbl_Crew_Class_Click.Crew_Class_Category END AS CrewCat
 		  FROM (SELECT Min(Clk.Click_ID) AS ID
 				FROM tbl_Click AS Clk
@@ -164,20 +136,13 @@ BEGIN
 									,tbl_Crew_Class_Click.Crew_Class_Category
 							HAVING 
 							--tbl_Click.Click_Crew_Assignment='X'
-							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Div G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
-							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
-							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
-							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
-							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
+							( AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
 							)  AS MinSt ON Clk.Click_Assignment_StartDate = MinSt.MinStDt AND Clk.Click_Order = MinSt.PM
 				LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
 				WHERE 
 				--Clk.Click_Crew_Assignment='X'
 				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Div G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
-				(((Clk.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
-				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1))
+				(( AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1))
 				GROUP BY Clk.Click_Order)  AS ClickID 
 			INNER JOIN tbl_Click AS C1 ON ClickID.ID = C1.Click_ID 
 			LEFT JOIN tbl_Crew_Class_Click ON C1.Click_Crew_Class = tbl_Crew_Class_Click.Crew_Class_Crew_Class) K1
@@ -201,11 +166,6 @@ BEGIN
 		  AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
 		 ) K
 
---------------------------------------------------------------------------------------------------------------------------
-	
--- Pull Slam Shut and RTU Schedule data from P6
-
---------------------------------------------------------------------------------------------------------------------------
 
 -- Set up Slam Shut Schedule Data
 
@@ -250,20 +210,7 @@ BEGIN
 
 			SELECT  a.PMHeader_PM_NUM AS PM
 				   ,PMHeader_PM_MAT AS MAT
-				   ,'SCADA' AS CrewType
-				   ,CASE WHEN [RTUCivilStart] IS NOT NULL THEN CASE WHEN RIGHT([RTUCivilStart],1) = 'A' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
-																	WHEN RIGHT([RTUCivilStart],1) = '*' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
-																	ELSE [RTUCivilStart] END
-						 WHEN [CivilStart] IS NOT NULL THEN CASE WHEN RIGHT([CivilStart],1) = 'A' THEN RTRIM(SUBSTRING([CivilStart],1,LEN([CivilStart])-1))
-																 WHEN RIGHT([CivilStart],1) = '*' THEN RTRIM(SUBSTRING([CivilStart],1,LEN([CivilStart])-1))
-																 ELSE [CivilStart] END
-
-						 ELSE CASE WHEN RIGHT([M&CElectStart],1) = 'A' THEN RTRIM(SUBSTRING([M&CElectStart],1,LEN([M&CElectStart])-1))
-								   WHEN RIGHT([M&CElectStart],1) = '*' THEN RTRIM(SUBSTRING([M&CElectStart],1,LEN([M&CElectStart])-1))
-								   ELSE [M&CElectStart] END
-						 END AS 'DateSchedStart'
-						--,[SSInstallFinish] AS 'DateClickEnd'
-					,CASE WHEN RIGHT([SSInstallFinish],1) = 'A' THEN RTRIM(SUBSTRING([SSInstallFinish],1,LEN([SSInstallFinish])-1))
+				
 						  WHEN RIGHT([SSInstallFinish],1) = '*' THEN RTRIM(SUBSTRING([SSInstallFinish],1,LEN([SSInstallFinish])-1))
 						  ELSE [SSInstallFinish] END AS 'DateSchedEnd'
 			FROM tbl_PMHeader a
@@ -282,14 +229,7 @@ BEGIN
 			SELECT PM.PMHeader_PM_NUM
 				  ,PM.PMHeader_PM_MAT
 				  ,'SCADA' AS CrewType
-				  ,CASE WHEN RIGHT([RTUCivilStart],1) = 'A' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
-						WHEN RIGHT([RTUCivilStart],1) = '*' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
-						ELSE [RTUCivilStart]
-				   END AS 'DateClickStart'
-				  ,CASE WHEN RIGHT([RTUFCOFinish],1) = 'A' THEN RTRIM(SUBSTRING([RTUFCOFinish],1,LEN([RTUFCOFinish])-1))
-						WHEN RIGHT([RTUFCOFinish],1) = '*' THEN RTRIM(SUBSTRING([RTUFCOFinish],1,LEN([RTUFCOFinish])-1))
-						ELSE [RTUFCOFinish]
-				   END AS 'DateClickEnd'
+				 
 			FROM tbl_PMHeader PM
 			LEFT JOIN #P6cteRTU ON TRY_CONVERT(int,#P6cteRTU.P6RTU_ProjectID) = pm.PMHeader_PM_NUM
 			WHERE PM.PMHeader_PM_MAT = '4AM' 
@@ -316,14 +256,7 @@ BEGIN
 				,Min(tbl_Click.Click_Assignment_StartDate) AS MinOfClick_Assignment_StartDate
 				,Max(tbl_Click.Click_Assignment_End_Date) AS MaxOfClick_Assignment_End_Date
 		  FROM tbl_Click
-		  LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = tbl_Click.Click_Crew_Class
-		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = Click_Order
-		  WHERE 
-		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Div G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
-		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
-		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
-		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
-		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
+		 AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
 		  GROUP BY tbl_Click.Click_Order
 		          ,PMHeader_PM_MAT
 		  HAVING Min(tbl_Click.Click_Assignment_StartDate) IS NOT NULL) H1
@@ -357,34 +290,12 @@ BEGIN
 
 	SELECT * INTO #Final 
 	FROM (SELECT #OrderList.PM
-				,CASE WHEN #WTS.Click_Crew_Individual_Name IS NOT NULL THEN #WTS.Click_Crew_Individual_Name
-					  WHEN #K.CrewName IS NOT NULL THEN #K.CrewName
-					  WHEN S.CrewType IS NOT NULL THEN S.CrewType
-					  ELSE NULL END AS Crew
-				,CASE WHEN #WTS.WTSCrewType IS NOT NULL THEN #WTS.WTSCrewType
-					  WHEN #K.CrewCat IS NOT NULL THEN #K.CrewCat
-					  WHEN S.CrewType IS NOT NULL THEN S.CrewType
-					  
-					  ELSE NULL END AS CrewType
-				,CASE WHEN #WTS.WTS_StDate IS NOT NULL THEN #WTS.WTS_StDate
-					  WHEN #H.MinOfClick_Assignment_StartDate IS NOT NULL THEN #H.MinOfClick_Assignment_StartDate
-					  WHEN S.DateSchedStart IS NOT NULL THEN S.DateSchedStart
-					  ELSE NULL END AS Sched_ST_Date
-				,CASE WHEN #WTS.WTS_EndDate IS NOT NULL THEN #WTS.WTS_EndDate
-					  WHEN #H.MaxOfClick_Assignment_End_Date IS NOT NULL THEN #H.MaxOfClick_Assignment_End_Date
-					  WHEN S.DateSchedEnd IS NOT NULL THEN S.DateSchedEnd
-					  ELSE NULL END AS Sched_End_Date
-	FROM #OrderList
+				
 	LEFT JOIN #WTS ON #WTS.Click_Order = PM
 	LEFT JOIN #K ON #K.PM = #OrderList.PM
 	LEFT JOIN #H ON #H.Click_Order = #OrderList.PM
 	LEFT JOIN (SELECT PM
-					 ,MAX(CrewType) AS CrewType
-					 ,MAX(DateSchedStart) AS DateSchedStart
-					 ,MAX(DateSchedEnd) AS DateSchedEnd
-			   FROM #SCADA
-			   WHERE #SCADA.DateSchedStart IS NOT NULL
-			   AND #SCADA.DateSchedEnd IS NOT NULL
+					
 			   GROUP BY PM) S ON S.PM = #OrderList.PM) FINAL
 
 	--select * from #final
