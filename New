@@ -1,5 +1,491 @@
-Description :"According to its version, Apache Log4j is less than or equal to 1.x. It is, therefore, no longer maintained by its vendor or provider.
+USE [DETEP]
+GO
+/****** Object:  StoredProcedure [dbo].[update_tbl_CJCF_PCR]    Script Date: 6/24/2025 10:42:57 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
-Lack of support implies that no new security patches for the product will be released by the vendor. As a result, it may contain security vulnerabilities.
 
-Solution:"	Upgrade to a version of Apache Log4j that is currently supported.
+ALTER PROCEDURE [dbo].[update_tbl_CJCF_PCR]
+
+AS
+BEGIN
+
+-- SET NOCOUNT ON added to prevent extra result sets from
+-- interfering with SELECT statements.
+SET NOCOUNT ON
+
+-- =============================================
+-- collect the data to re-populate the table
+-- =============================================
+
+	IF OBJECT_ID('tempdb..#LastChange') IS NOT NULL
+    DROP TABLE #LastChange
+
+	SELECT * 
+	INTO #LastChange --grabs the ID of the last data related to the last change on a PCR in FCC
+	FROM (
+			SELECT MAX(ChangeActivityLogID) AS LastChangeActivityLogID
+				  ,PCRID
+			FROM OPENQUERY(DataGoat, 'SELECT * FROM FCC2Dist.dbo.pst_ChangeActivityLog')
+			GROUP BY PCRID
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#LL_PCR') IS NOT NULL
+    DROP TABLE #LL_PCR
+
+	SELECT * 
+	INTO #LL_PCR --this pulls date relatated to a list of PCR's from the Ledger Log that were passed through the Ledger rather than through FCC (e.g. Business Case changes will be captured this way)
+	FROM (
+			SELECT L.LedgerLog_PM
+				  ,L.LedgerLog_PCR
+				  ,L.LedgerLog_NewValue
+				  ,L.LedgerLog_CreateDate
+				  ,L.LedgerLog_CreateUser
+				  ,L.LedgerLog_Description
+			FROM tbl_LedgerLog L
+			INNER JOIN (
+						SELECT LL.LedgerLog_PM
+								,LL.LedgerLog_PCR
+								,MAX(LL.LedgerLog_ID) AS MaxID --grab the ID of the most current version in the Ledger Log
+						FROM tbl_LedgerLog LL
+						WHERE LL.LedgerLog_Category = 'Budget'
+							AND ISNULL(LL.LedgerLog_PCR,'') <> ''
+							AND LL.LedgerLog_PCR NOT IN (SELECT CAST(PCRID AS NVARCHAR(255)) FROM #LastChange) --only grab data where the data doesn't exist in the FCC tables
+							AND ISNUMERIC(LL.LedgerLog_PM) = 1
+						GROUP BY LL.LedgerLog_PM
+								,LL.LedgerLog_PCR
+						) AS LM ON LM.MaxID = L.LedgerLog_ID
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#PCRMaxDt') IS NOT NULL
+    DROP TABLE #PCRMaxDt
+
+	SELECT * 
+	INTO #PCRMaxDt --grabs the last date of the PCR in FCC
+	FROM (
+		  SELECT CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+			  ,PCR.PMNumber
+			  ,MAX(LastStatusChangeDate) AS LastChangeDate
+		  FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
+--		  LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequestChangeType') PCR_T ON PCR.PCRID = PCR_T.PCRID
+--		  WHERE PCR_T.ChangeTypeID = 2 --Type 2 = Change request involved a financial change --commented out so that all types of PCR's are shown 2019-05-17
+		  GROUP BY PCR.PCRID
+				  ,PMNumber				
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#LastPCR') IS NOT NULL
+    DROP TABLE #LastPCR
+
+	SELECT * 
+	INTO #LastPCR --combines PCR data from FCC with PCR data in the Ledger (which would be Business Case data) and identifies which PCR is the last PCR change.
+	FROM (
+			SELECT All_PCR1.PMNumber
+				  ,All_PCR1.PCRID AS LastPCRID
+			FROM (
+					SELECT PD.PMNumber
+						  ,PD.PCRID
+						  ,PD.LastChangeDate
+					FROM #PCRMaxDt PD
+					UNION ALL
+					SELECT L.LedgerLog_PM
+						  ,L.LedgerLog_PCR
+						  ,L.LedgerLog_CreateDate
+					FROM #LL_PCR L
+				 ) All_PCR1
+			INNER JOIN ( 
+						SELECT All_PCR2.PMNumber
+							  ,MAX(All_PCR2.LastChangeDate) AS LastChangeDate
+						FROM (
+								SELECT PD.PMNumber
+									  ,PD.PCRID
+									  ,PD.LastChangeDate
+								FROM #PCRMaxDt PD
+								UNION ALL
+								SELECT L.LedgerLog_PM
+									  ,L.LedgerLog_PCR
+									  ,L.LedgerLog_CreateDate
+								FROM #LL_PCR L
+								) All_PCR2
+						GROUP BY All_PCR2.PMNumber
+						) A ON A.PMNumber = All_PCR1.PMNumber AND A.LastChangeDate = All_PCR1.LastChangeDate		
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#ApprPCRMaxDt') IS NOT NULL
+    DROP TABLE #ApprPCRMaxDt
+
+	SELECT * 
+	INTO #ApprPCRMaxDt -- for flagging the last Financial Change PCR in FCC
+	FROM (
+			SELECT CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+				  ,PCR.PMNumber
+				  ,MAX(LastStatusChangeDate) AS LastChangeDate
+			FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
+			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequestChangeType') PCR_T ON PCR.PCRID = PCR_T.PCRID
+			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_WorkflowStatus') W ON PCR.WorkflowStatusID = W.WorkflowStatusID
+			WHERE PCR_T.ChangeTypeID = 2 --Type 2 = Change request involved a financial change
+			  AND W.WorkflowStatus = 'Approved'
+			GROUP BY PCR.PCRID
+					,PMNumber				
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#LastApprovedPCR') IS NOT NULL
+    DROP TABLE #LastApprovedPCR
+
+	SELECT * 
+	INTO #LastApprovedPCR --combines the last Fincancial Change in FCC with the last Financial Change in Ledger (which would be a business case change) to flag the overall Last Financial Change.
+	FROM (
+			SELECT All_PCR1.PMNumber
+				  ,All_PCR1.PCRID AS LastApprovedPCRID
+			FROM (
+					SELECT PD.PMNumber
+							,PD.PCRID
+							,PD.LastChangeDate
+					FROM #ApprPCRMaxDt PD
+					UNION ALL
+					SELECT L.LedgerLog_PM
+							,L.LedgerLog_PCR
+							,L.LedgerLog_CreateDate
+					FROM #LL_PCR L
+					) All_PCR1
+			INNER JOIN ( 
+						SELECT All_PCR2.PMNumber
+							  ,MAX(All_PCR2.LastChangeDate) AS LastChangeDate
+						FROM (
+								SELECT PD.PMNumber
+										,PD.PCRID
+										,PD.LastChangeDate
+								FROM #ApprPCRMaxDt PD
+								UNION ALL
+								SELECT L.LedgerLog_PM
+										,L.LedgerLog_PCR
+										,L.LedgerLog_CreateDate
+								FROM #LL_PCR L
+								) All_PCR2
+						GROUP BY All_PCR2.PMNumber
+						) A ON A.PMNumber = All_PCR1.PMNumber AND A.LastChangeDate = All_PCR1.LastChangeDate		
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#PYF_sub') IS NOT NULL
+    DROP TABLE #PYF_sub
+
+	SELECT * 
+	INTO #PYF_sub
+	FROM (
+			SELECT tbl_PMHeader.PMHeader_PM_NUM
+				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+				  ,SUM(tbl_LedgerPlan.LedgerPlan_Budget) AS PriorYrFunding
+			FROM tbl_LedgerPlan
+			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
+						SELECT MAX(L.LedgerPlan_ID) AS ID
+								,L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+						FROM tbl_LedgerPlan L
+						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
+																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
+						GROUP BY L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+
+						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
+			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
+			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
+																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) > TRY_CONVERT(INT,B.LedgerPlan_Year)
+																										   AND PCR.PCRID = B.PCRID
+			GROUP BY tbl_PMHeader.PMHeader_PM_NUM
+					,PCR.PCRID
+		 ) A
+
+-- Add in PYF for PCR's that have not yet been approved, and therefor have not yet written data to Ledger
+
+	IF OBJECT_ID('tempdb..#PYF') IS NOT NULL
+    DROP TABLE #PYF
+
+	SELECT * 
+	INTO #PYF
+	FROM (
+			SELECT *
+			FROM #PYF_sub
+
+			UNION ALL
+
+			SELECT PCR.PMNumber AS PMHeader_PM_NUM
+					,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+					,SUM(C.SAPOrderCosts_Amount) AS PriorYrFunding
+			FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
+			INNER JOIN tbl_SAP_AAQ230_OrderCosts C ON C.SAPOrderCosts_PM = PCR.PMNumber AND C.SAPOrderCosts_PostingYear < PCR.CurrentYear
+			LEFT JOIN #PYF_sub ON #PYF_sub.PCRID = PCR.PCRID AND #PYF_sub.PMHeader_PM_NUM = PCR.PMNumber
+			WHERE #PYF_sub.PCRID IS NULL
+			GROUP BY PCR.PMNumber
+					,CAST(PCR.PCRID AS NVARCHAR(255))
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#BYF') IS NOT NULL
+    DROP TABLE #BYF
+
+	SELECT * 
+	INTO #BYF
+	FROM (
+			SELECT tbl_PMHeader.PMHeader_PM_NUM
+				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+				  ,tbl_LedgerPlan.LedgerPlan_Budget AS BudgetYrFunding
+			FROM tbl_LedgerPlan
+			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
+						SELECT MAX(L.LedgerPlan_ID) AS ID
+								,L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+						FROM tbl_LedgerPlan L
+						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
+																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
+						GROUP BY L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+
+						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
+			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
+			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
+																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) = TRY_CONVERT(INT,B.LedgerPlan_Year)
+																										   AND PCR.PCRID = B.PCRID
+		 ) A
+
+-- =============================================
+	IF OBJECT_ID('tempdb..#FYF') IS NOT NULL
+    DROP TABLE #FYF
+
+	SELECT * 
+	INTO #FYF
+	FROM (
+			SELECT tbl_PMHeader.PMHeader_PM_NUM
+				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
+				  ,SUM(tbl_LedgerPlan.LedgerPlan_Budget) AS FutureYrFunding
+			FROM tbl_LedgerPlan
+			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
+						SELECT MAX(L.LedgerPlan_ID) AS ID
+								,L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+						FROM tbl_LedgerPlan L
+						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
+																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
+						GROUP BY L.LedgerPlan_PM
+								,L.LedgerPlan_Year
+								,PCR.PCRID
+
+						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
+			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
+			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
+																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) < TRY_CONVERT(INT,B.LedgerPlan_Year)
+																										   AND PCR.PCRID = B.PCRID
+			GROUP BY tbl_PMHeader.PMHeader_PM_NUM
+					,PCR.PCRID
+		 ) A
+-- =============================================
+	IF OBJECT_ID('tempdb..#CJCF_PCRRev') IS NOT NULL
+    DROP TABLE #CJCF_PCRRev
+
+	SELECT * 
+	INTO #CJCF_PCRRev
+	FROM (
+		  SELECT C.CJCF_PM
+				,C.CJCF_PCRID
+				,MAX(C.CJCF_RevisionID) AS MaxCJCF_RevisionID
+		  FROM tbl_CJCF C
+		  GROUP BY C.CJCF_PM
+				  ,C.CJCF_PCRID
+		 ) A
+
+-- =============================================
+-- clear the table data
+-- =============================================
+TRUNCATE TABLE tbl_CJCF_PCR
+
+-- =============================================
+-- INSERT the data into the permanent table
+-- =============================================
+
+INSERT INTO [dbo].[tbl_CJCF_PCR]
+           ([PCRID]
+           ,[PMNumber]
+           ,[WorkflowStatusID]
+           ,[WorkflowStatus]
+           ,[FinalApprovedDate]
+           ,[LastStatusChangeDate]
+           ,[CancelReason]
+           ,[CancelDate]
+           ,[CreatedBy]
+           ,[CreatedDate]
+           ,[UpdatedBy]
+           ,[UpdatedDate]
+           ,[FundingYearToDisplay]
+           ,[JobOwner]
+           ,[DecisionDate]
+           ,[JobEstimateComplete]
+           ,[ConstructionReady]
+           ,[ConstructionStart]
+           ,[ConstructionEnd]
+           ,[ProjectInfo]
+           ,[PriorYrFunding]
+           ,[BudgetYrFunding]
+           ,[FutureYrBudget]
+           ,[TotalFundedAmount]
+           ,[BudgetYrUnitFAC]
+           ,[FutureYrUnitFAC]
+           ,[BudgetYear]
+           ,[RebaselineFlag]
+           ,[PreviousApprover]
+           ,[NextApprover]
+           ,[CurrentYear]
+           ,[RequestedDate]
+           ,[ConstructionManagerApproval]
+           ,[LaborGroup]
+           ,[LaborStartDate]
+           ,[LaborEndDate]
+           ,[CcbRequired]
+           ,[EscalatedWorkflow]
+           ,[LastChangeActivityLogID]
+           ,[LastDateOfAction]
+           ,[LastActor]
+           ,[LastResponder]
+           ,[LastAction]
+           ,[LastComment]
+           ,[LastPCRFlag]
+           ,[LastApprovedBudgetPCRFlag]
+		   ,[LastCJCF_SubmissionID])
+
+SELECT CAST(PCR.PCRID AS nvarchar(255)) AS PCRID
+      ,PCR.PMNumber
+      ,PCR.WorkflowStatusID
+	  ,WFS.WorkflowStatus
+      ,TRY_CONVERT(datetime, PCR.FinalApprovedDate) AS FinalApprovedDate
+      ,TRY_CONVERT(datetime, PCR.LastStatusChangeDate) AS LastStatusChangeDate
+      ,PCR.CancelReason
+      ,PCR.CancelDate
+      ,PCR.CreatedBy
+      ,TRY_CONVERT(datetime, PCR.CreatedDate) AS CreatedDate
+      ,PCR.UpdatedBy
+      ,TRY_CONVERT(datetime, PCR.UpdatedDate) AS UpdatedDate
+      ,PCR.FundingYearToDisplay
+      ,PCR.JobOwner --
+      ,TRY_CONVERT(datetime, PCR.DecisionDate) AS DecisionDate
+      ,TRY_CONVERT(datetime, PCR.JobEstimateComplete) AS JobEstimateComplete
+      ,TRY_CONVERT(datetime, PCR.ConstructionReady) AS ConstructionReady
+      ,TRY_CONVERT(datetime, PCR.ConstructionStart) AS ConstructionStart
+      ,TRY_CONVERT(datetime,PCR.ConstructionEnd) AS ConstructionEnd
+      ,PCR.ProjectInfo
+	  ,PYF.PriorYrFunding
+      ,BYF.BudgetYrFunding AS BudgetYrFunding
+      ,FYF.FutureYrFunding AS FutureYrBudget
+	  ,CASE WHEN ISNULL(PCR.FinalApprovedDate,'1900-01-01') = '1900-01-01' THEN ISNULL(PYF.PriorYrFunding,0) + ISNULL(PCR.CurrentYrCostFAC,0) + ISNULL(PCR.FutureYrCostFAC,0) 
+			WHEN PYF.PriorYrFunding IS NULL AND BYF.BudgetYrFunding IS NULL AND FYF.FutureYrFunding IS NULL THEN NULL
+			ELSE ISNULL(PYF.PriorYrFunding,0) + ISNULL(BYF.BudgetYrFunding,0) + ISNULL(FYF.FutureYrFunding,0) 
+	   END AS TotalFundedAmount
+      ,PCR.CurrentYrUnitFAC AS BudgetYrUnitFAC
+      ,PCR.FutureYrUnitFAC
+      ,PCR.BudgetScenario AS BudgetYear
+      ,PCR.RebaselineFlag
+      ,PCR.PreviousApprover
+      ,PCR.NextApprover
+      ,PCR.CurrentYear
+      ,TRY_CONVERT(datetime, PCR.RequestedDate) AS RequestedDate
+      ,PCR.ConstructionManagerApproval
+      ,LTRIM(RTRIM(PCR.LaborGroup)) AS LaborGroup
+      ,TRY_CONVERT(datetime, PCR.LaborStartDate) AS LaborStartDate
+      ,TRY_CONVERT(datetime, PCR.LaborEndDate) AS LaborEndDate
+      ,PCR.CcbRequired
+      ,PCR.EscalatedWorkflow
+	  ,CAL.[ChangeActivityLogID] AS LastChangeActivityLogID
+      ,TRY_CONVERT(datetime, CAL.[DateOfAction]) AS LastDateOfAction
+      ,CAL.[Actor] AS LastActor
+      ,CAL.[Responder] AS LastResponder
+      ,CAL.[Action] AS LastAction
+      ,LTRIM(RTRIM(CAL.[Comment])) AS LastComment
+	  ,IIF(ISNULL(LPCR.LastPCRID, '-1')='-1', 0, 1) AS LastPCRFlag	  
+	  ,IIF(ISNULL(LAPCR.LastApprovedPCRID, '-1')='-1', 0, 1) AS LastApprovedPCRFlag
+	  ,C.MaxCJCF_RevisionID	  
+FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
+LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_WorkflowStatus') WFS ON PCR.WorkflowStatusID = WFS.WorkflowStatusID
+LEFT JOIN #LastChange LC ON LC.PCRID = CAST(PCR.PCRID AS NVARCHAR(255))
+LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ChangeActivityLog') CAL ON LC.LastChangeActivityLogID = CAL.ChangeActivityLogID
+LEFT JOIN #LastPCR LPCR ON LPCR.LastPCRID = CAST(PCR.PCRID AS nvarchar(255))
+LEFT JOIN #LastApprovedPCR LAPCR ON LAPCR.LastApprovedPCRID = CAST(PCR.PCRID AS nvarchar(255))
+LEFT JOIN #PYF PYF ON PYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
+LEFT JOIN #CJCF_PCRRev C ON C.CJCF_PM = PCR.PMNumber AND TRY_CONVERT(int,C.CJCF_PCRID) = PCR.PCRID
+LEFT JOIN #BYF BYF ON BYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
+LEFT JOIN #FYF FYF ON FYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
+
+UNION ALL
+
+SELECT L.LedgerLog_PCR AS PCRID
+      ,L.LedgerLog_PM AS PMNumber
+      ,NULL AS WorkflowStatusID
+	  ,'APPROVED' AS WorkflowStatus
+      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS FinalApprovedDate
+      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS LastStatusChangeDate
+      ,NULL AS CancelReason
+      ,NULL AS CancelDate
+      ,L.LedgerLog_CreateUser AS CreatedBy
+      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS CreatedDate
+      ,L.LedgerLog_CreateUser AS UpdatedBy
+      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS UpdatedDate
+      ,NULL AS FundingYearToDisplay
+      ,NULL AS JobOwner --
+      ,NULL AS DecisionDate
+      ,NULL AS JobEstimateComplete
+      ,NULL AS ConstructionReady
+      ,NULL AS ConstructionStart
+      ,NULL AS ConstructionEnd
+      ,L.LedgerLog_Description AS ProjectInfo
+	  ,NULL AS PriorYrFunding
+      ,NULL AS BudgetYrFunding
+      ,NULL AS FutureYrBudget
+	  ,TRY_CONVERT(money,L.LedgerLog_NewValue) AS TotalFundedAmount
+      ,NULL AS BudgetYrUnitFAC
+      ,NULL AS FutureYrUnitFAC
+      ,NULL AS BudgetYear
+      ,NULL AS RebaselineFlag
+      ,NULL AS PreviousApprover
+      ,NULL AS NextApprover
+      ,NULL AS CurrentYear
+      ,NULL AS RequestedDate
+      ,NULL AS ConstructionManagerApproval
+      ,NULL AS LaborGroup
+      ,NULL AS LaborStartDate
+      ,NULL AS LaborEndDate
+      ,NULL AS CcbRequired
+      ,NULL AS EscalatedWorkflow
+	  ,NULL AS LastChangeActivityLogID
+      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS LastDateOfAction
+      ,L.LedgerLog_CreateUser AS LastActor
+      ,NULL AS LastResponder
+      ,NULL AS LastAction
+      ,NULL AS LastComment
+	  ,IIF(ISNULL(LPCR.LastPCRID, '-1')='-1', 0, 1) AS LastPCRFlag	  
+	  ,IIF(ISNULL(LAPCR.LastApprovedPCRID, '-1')='-1', 0, 1) AS LastApprovedPCRFlag
+	  ,C.MaxCJCF_RevisionID
+FROM #LL_PCR L
+LEFT JOIN #LastPCR LPCR ON LPCR.LastPCRID = L.LedgerLog_PCR AND LPCR.PMNumber = L.LedgerLog_PM
+LEFT JOIN #LastApprovedPCR LAPCR ON LAPCR.LastApprovedPCRID = L.LedgerLog_PCR AND LAPCR.PMNumber = L.LedgerLog_PM
+LEFT JOIN #CJCF_PCRRev C ON C.CJCF_PM = L.LedgerLog_PM AND C.CJCF_PCRID = L.LedgerLog_PCR
+
+-- =============================================
+-- Append SAP Audit log with log information
+-- =============================================
+
+	INSERT INTO DETEP.dbo.tbl_SAP_AuditLog (  SAPAudit_Table
+											, SAPAudit_UpDateDt
+											, SAPAudit_LANID, UpdateDate, ProcedureName)
+	VALUES('update_tbl_CJCF_PCR ver: 07/06/2023'
+		   , CONVERT(decimal(12, 7), GETDATE()) + 2 --convert this date numerical value to Excel Serial Number equivalent.
+		   , UPPER(SYSTEM_USER), getdate(), OBJECT_NAME(@@PROCID))
+
+END
