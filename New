@@ -1,481 +1,429 @@
 USE [DETEP]
 GO
-/****** Object:  StoredProcedure [dbo].[update_tbl_CJCF_PCR]    Script Date: 6/24/2025 10:42:57 PM ******/
+/****** Object:  StoredProcedure [dbo].[update_rpt_Schedule_Summary]    Script Date: 6/24/2025 10:54:58 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
 
-ALTER PROCEDURE [dbo].[update_tbl_CJCF_PCR]
+
+ALTER PROCEDURE [dbo].[update_rpt_Schedule_Summary]
 
 AS
 BEGIN
 
--- SET NOCOUNT ON added to prevent extra result sets from
--- interfering with SELECT statements.
-SET NOCOUNT ON
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON
 
--- =============================================
--- collect the data to re-populate the table
--- =============================================
 
-	IF OBJECT_ID('tempdb..#LastChange') IS NOT NULL
-    DROP TABLE #LastChange
+--------------------------------------------------------------------------------------------------------------------------
+	
+-- Create temp table with distinct order list	
 
-	SELECT * 
-	INTO #LastChange --grabs the ID of the last data related to the last change on a PCR in FCC
+--------------------------------------------------------------------------------------------------------------------------
+
+	IF OBJECT_ID('tempdb..#OrderList') IS NOT NULL
+		DROP TABLE #OrderList
+
+	SELECT * INTO #OrderList
+	FROM (SELECT DISTINCT Click_Order AS PM
+		  FROM tbl_Click Clk
+		  LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
+		  WHERE Click_Order IS NOT NULL AND
+		        Clk.Click_Crew_Individual_Name NOT LIKE '%Mechanic%' AND
+				--Clk.Click_Crew_Assignment='X'
+				((((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Div G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
+				(((Clk.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)))
+	  
+		  UNION
+	  
+		  SELECT DISTINCT MC90Day_Order
+		  FROM tbl_MC90Day
+		  WHERE MC90Day_Order IS NOT NULL
+
+		  UNION
+	  
+		  SELECT DISTINCT TRY_CONVERT(int,P6RTU_ProjectID)
+		  FROM tbl_P6_SCADA
+		  WHERE P6RTU_ProjectID IS NOT NULL
+		  
+		  UNION
+
+		  SELECT DISTINCT Click_Order
+		  FROM tbl_WorkToSchedule) A
+
+	--SELECT * FROM #OrderList
+
+--------------------------------------------------------------------------------------------------------------------------
+	
+-- Get crew information from various sources
+
+--------------------------------------------------------------------------------------------------------------------------
+
+	-- Join Work to Schedule table with Salesforce to give preference to operations when primary resource is flagged
+
+	IF OBJECT_ID('tempdb..#WTS') IS NOT NULL
+		DROP TABLE #WTS
+
+	SELECT * INTO #WTS
+	FROM (SELECT a.Click_Order
+				  ,Click_Crew_Individual_Name
+				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
+						WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GC GD%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV D%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
+						ELSE [2ndResource] END AS WTSCrewType
+				  ,CASE WHEN SchedDt_Override = 1 THEN Click_Assignment_StartDate
+						ELSE NULL END AS WTS_StDate
+				  ,CASE WHEN SchedDt_Override = 1 THEN  Click_Assignment_End_Date
+						ELSE NULL END AS WTS_EndDate --only pull dates from matching salesforce operation if dates will override (as opposed to summary of dates
+			FROM tbl_WorkToSchedule a
+			INNER JOIN tbl_Click b ON b.Click_Order = a.Click_Order
+										AND b.Click_Operation_Task_Number = a.OperationNumber
+			INNER JOIN tbl_PMHeader ON PMHeader_PM_NUM = a.Click_Order
+			WHERE Primary_Resource = 1
+			AND a.Click_Order IS NOT NULL
+			AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM') --Slamshuts excluded as data is in P6
+			
+			
+			UNION
+
+			-- This section brings in orders where Jesse has allocated a resource in the Work to Schedule table, but they aren't scheduled
+
+			SELECT a.Click_Order
+				  ,NULL
+				  ,CASE WHEN [2ndResource] = 'GD Contracting' THEN 'UPC'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GC GD%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV G%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%DIV D%' AND b.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
+					    WHEN ([2ndResource] is NULL OR [2ndResource] = '') AND b.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
+					    ELSE [2ndResource] END AS WTSCrewType
+				  ,NULL
+				  ,NULL
+			FROM tbl_WorkToSchedule a
+			INNER JOIN tbl_PMHeader ON PMHeader_PM_NUM = a.Click_Order
+			LEFT JOIN tbl_Click b ON b.Click_Order = a.Click_Order 
+			WHERE 1 = 1
+			AND b.Click_Order IS NULL
+			AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
+			) WTS  
+
+	-- Pull summary dates from Salesforce
+
+	IF OBJECT_ID('tempdb..#K1') IS NOT NULL
+    DROP TABLE #K1
+
+	IF OBJECT_ID('tempdb..#K') IS NOT NULL
+    DROP TABLE #K
+
+	SELECT *
+	INTO #K1
+	FROM (SELECT  C1.Click_Order AS PM
+				, C1.Click_Crew_Individual_Name AS CrewName
+				, CASE WHEN C1.Click_Crew_Individual_Name LIKE '%zzGT%' THEN 'GT Contracting'
+					   --WHEN C1.Click_Crew_Individual_Name LIKE '%Mechanic%' THEN 'Mechanic'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%Contract%' THEN 'UPC'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%GC GD%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'GC'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name LIKE '%Non-Weld%' THEN 'M&C'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name LIKE '%Non Weld%' THEN 'M&C'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV G%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%DIV D%' AND C1.Click_Crew_Individual_Name NOT LIKE '%Weld%' THEN 'M&C'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%Weld%' THEN 'Welder'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%Corrosion%' THEN 'Corrosion'
+					   WHEN C1.Click_Crew_Individual_Name LIKE '%GT%' THEN 'GT'
+					   ELSE tbl_Crew_Class_Click.Crew_Class_Category END AS CrewCat
+		  FROM (SELECT Min(Clk.Click_ID) AS ID
+				FROM tbl_Click AS Clk
+				INNER JOIN (SELECT  tbl_Click.Click_Order AS PM
+								  , Min(tbl_Click.Click_Assignment_StartDate) AS MinStDt
+							FROM tbl_Click
+							LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = tbl_Click.Click_Crew_Class
+							GROUP BY  tbl_Click.Click_Order
+									, tbl_Click.Click_Crew_Assignment
+									,tbl_Click.Click_Crew_Individual_Name
+									,tbl_Click.Click_CurrentRecord
+									,tbl_Click.Click_Crew_Class
+									,tbl_Crew_Class_Click.Crew_Class_Category
+							HAVING 
+							--tbl_Click.Click_Crew_Assignment='X'
+							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Div G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
+							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
+							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
+							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
+							(((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
+							)  AS MinSt ON Clk.Click_Assignment_StartDate = MinSt.MinStDt AND Clk.Click_Order = MinSt.PM
+				LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = Clk.Click_Crew_Class
+				WHERE 
+				--Clk.Click_Crew_Assignment='X'
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Div G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC G%') AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR 
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
+				(((Clk.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1)) OR
+				(((Clk.Click_Crew_Assignment)='X') AND ((Clk.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((Clk.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((Clk.Click_Crew_Class) Not Like '%TR_MCM%') AND ((Clk.Click_CurrentRecord) = 1))
+				GROUP BY Clk.Click_Order)  AS ClickID 
+			INNER JOIN tbl_Click AS C1 ON ClickID.ID = C1.Click_ID 
+			LEFT JOIN tbl_Crew_Class_Click ON C1.Click_Crew_Class = tbl_Crew_Class_Click.Crew_Class_Crew_Class) K1
+
+	SELECT *
+	INTO #K
+	FROM (SELECT  #K1.PM
+			    , #K1.CrewName
+				, #K1.CrewCat
+		  FROM #K1
+		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = PM
+		  WHERE ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
+
+		  UNION
+		  SELECT  tbl_MC90Day.MC90Day_Order
+				, tbl_MC90Day.MC90Day_Crew
+				, 'M&C' AS CrewCat
+		  FROM tbl_MC90Day
+		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = MC90Day_Order
+		  WHERE tbl_MC90Day.MC90Day_Order NOT IN (SELECT #K1.PM FROM #K1)
+		  AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
+		 ) K
+
+--------------------------------------------------------------------------------------------------------------------------
+	
+-- Pull Slam Shut and RTU Schedule data from P6
+
+--------------------------------------------------------------------------------------------------------------------------
+
+-- Set up Slam Shut Schedule Data
+
+	IF OBJECT_ID('tempdb..#P6cte') IS NOT NULL
+		DROP TABLE #P6cte
+
+	SELECT * INTO #P6cte 
+	FROM(SELECT [P6RTU_ProjectID]
+				,[CivilStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6a-Civil' THEN [P6RTU_Start] END)
+				,[M&CElectStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6h-SS M&C' THEN [P6RTU_Start] END)
+				,[SSInstallFinish] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '8b-CFCO' THEN [P6RTU_Finish] END)
+		 FROM [DETEP].[dbo].[tbl_P6_SCADA]
+		 WHERE [P6RTU_SCADA-Summary] IN ( '6a-Civil'
+									     ,'6h-SS M&C'
+										 ,'8b-CFCO')
+		 GROUP BY [P6RTU_ProjectID]
+		 )P6CTE
+
+
+
+	IF OBJECT_ID('tempdb..#P6cteRTU') IS NOT NULL
+		DROP TABLE #P6cteRTU
+		 
+	SELECT * INTO #P6cteRTU 
+	FROM (SELECT [P6RTU_ProjectID]
+				,[RTUCivilStart] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '6a-Civil' THEN [P6RTU_Start] END)
+				,[RTUFCOFinish] = MAX(CASE [P6RTU_SCADA-Summary] WHEN '8b-CFCO' THEN [P6RTU_Finish] END)
+		  FROM [DETEP].[dbo].[tbl_P6_SCADA]
+		  WHERE [P6RTU_SCADA-Summary] IN ( '6a-Civil'
+										  ,'8b-CFCO')
+		  GROUP BY [P6RTU_ProjectID]
+		 )P6CTERTU
+
+--Final P6 query to combine Slam Shut and RTU Data
+
+	IF OBJECT_ID('tempdb..#SCADA') IS NOT NULL
+		DROP TABLE #SCADA
+
+	SELECT * INTO #SCADA
 	FROM (
-			SELECT MAX(ChangeActivityLogID) AS LastChangeActivityLogID
-				  ,PCRID
-			FROM OPENQUERY(DataGoat, 'SELECT * FROM FCC2Dist.dbo.pst_ChangeActivityLog')
-			GROUP BY PCRID
-		 ) A
+			--Slam Shuts
+
+			SELECT  a.PMHeader_PM_NUM AS PM
+				   ,PMHeader_PM_MAT AS MAT
+				   ,'SCADA' AS CrewType
+				   ,CASE WHEN [RTUCivilStart] IS NOT NULL THEN CASE WHEN RIGHT([RTUCivilStart],1) = 'A' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
+																	WHEN RIGHT([RTUCivilStart],1) = '*' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
+																	ELSE [RTUCivilStart] END
+						 WHEN [CivilStart] IS NOT NULL THEN CASE WHEN RIGHT([CivilStart],1) = 'A' THEN RTRIM(SUBSTRING([CivilStart],1,LEN([CivilStart])-1))
+																 WHEN RIGHT([CivilStart],1) = '*' THEN RTRIM(SUBSTRING([CivilStart],1,LEN([CivilStart])-1))
+																 ELSE [CivilStart] END
+
+						 ELSE CASE WHEN RIGHT([M&CElectStart],1) = 'A' THEN RTRIM(SUBSTRING([M&CElectStart],1,LEN([M&CElectStart])-1))
+								   WHEN RIGHT([M&CElectStart],1) = '*' THEN RTRIM(SUBSTRING([M&CElectStart],1,LEN([M&CElectStart])-1))
+								   ELSE [M&CElectStart] END
+						 END AS 'DateSchedStart'
+						--,[SSInstallFinish] AS 'DateClickEnd'
+					,CASE WHEN RIGHT([SSInstallFinish],1) = 'A' THEN RTRIM(SUBSTRING([SSInstallFinish],1,LEN([SSInstallFinish])-1))
+						  WHEN RIGHT([SSInstallFinish],1) = '*' THEN RTRIM(SUBSTRING([SSInstallFinish],1,LEN([SSInstallFinish])-1))
+						  ELSE [SSInstallFinish] END AS 'DateSchedEnd'
+			FROM tbl_PMHeader a
+			LEFT JOIN (SELECT PMHeader_PM_NUM
+							 ,PMHeader_FunctionalLocation
+					   FROM tbl_PMHeader
+					   WHERE PMHeader_PM_MAT = '4AM')PMH ON PMH.PMHeader_FunctionalLocation = a.PMHeader_FunctionalLocation
+			LEFT JOIN #P6cte ON TRY_CONVERT(int,#P6cte.P6RTU_ProjectID) = a.PMHeader_PM_NUM
+			LEFT JOIN #P6cteRTU ON TRY_CONVERT(int,#P6cteRTU.P6RTU_ProjectID) = PMH.PMHeader_PM_NUM
+			WHERE PMHeader_PM_MAT = '50N'
+			
+			-- RTUs
+
+			UNION
+
+			SELECT PM.PMHeader_PM_NUM
+				  ,PM.PMHeader_PM_MAT
+				  ,'SCADA' AS CrewType
+				  ,CASE WHEN RIGHT([RTUCivilStart],1) = 'A' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
+						WHEN RIGHT([RTUCivilStart],1) = '*' THEN RTRIM(SUBSTRING([RTUCivilStart],1,LEN([RTUCivilStart])-1))
+						ELSE [RTUCivilStart]
+				   END AS 'DateClickStart'
+				  ,CASE WHEN RIGHT([RTUFCOFinish],1) = 'A' THEN RTRIM(SUBSTRING([RTUFCOFinish],1,LEN([RTUFCOFinish])-1))
+						WHEN RIGHT([RTUFCOFinish],1) = '*' THEN RTRIM(SUBSTRING([RTUFCOFinish],1,LEN([RTUFCOFinish])-1))
+						ELSE [RTUFCOFinish]
+				   END AS 'DateClickEnd'
+			FROM tbl_PMHeader PM
+			LEFT JOIN #P6cteRTU ON TRY_CONVERT(int,#P6cteRTU.P6RTU_ProjectID) = pm.PMHeader_PM_NUM
+			WHERE PM.PMHeader_PM_MAT = '4AM' 
+			) SCADA
+
+	--select * from #SCADA
+	
+--------------------------------------------------------------------------------------------------------------------------
+	
+-- Get summary dates	
+
+--------------------------------------------------------------------------------------------------------------------------
+
+	-------------------------------------Get summary dates from click-----------------------------------------------------
+
+	IF OBJECT_ID('tempdb..#H') IS NOT NULL
+    DROP TABLE #H
+	IF OBJECT_ID('tempdb..#H1') IS NOT NULL
+    DROP TABLE #H1
+
+	SELECT * INTO #H1
+	FROM (SELECT tbl_Click.Click_Order
+			    ,PMHeader_PM_MAT
+				,Min(tbl_Click.Click_Assignment_StartDate) AS MinOfClick_Assignment_StartDate
+				,Max(tbl_Click.Click_Assignment_End_Date) AS MaxOfClick_Assignment_End_Date
+		  FROM tbl_Click
+		  LEFT JOIN tbl_Crew_Class_Click ON tbl_Crew_Class_Click.Crew_Class_Crew_Class = tbl_Click.Click_Crew_Class
+		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = Click_Order
+		  WHERE 
+		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Div G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
+		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC G%') AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR 
+		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%GC D%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
+		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Crew_Class_Click.Crew_Class_Category) IN ('GC', 'UPC' )) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1)) OR
+		   (((tbl_Click.Click_Crew_Assignment)='X') AND ((tbl_Click.Click_Crew_Individual_Name) Like '%Manually%' ) AND ((tbl_Click.Click_Crew_Individual_Name) NOT LIKE '%crossbore%') AND ((tbl_Click.Click_Crew_Class) Not Like '%TR_MCM%') AND ((tbl_Click.Click_CurrentRecord) = 1))
+		  GROUP BY tbl_Click.Click_Order
+		          ,PMHeader_PM_MAT
+		  HAVING Min(tbl_Click.Click_Assignment_StartDate) IS NOT NULL) H1
+
+
+	SELECT * INTO #H
+	FROM (SELECT  #H1.Click_Order
+			    , #H1.MinOfClick_Assignment_StartDate
+				, #H1.MaxOfClick_Assignment_End_Date
+		  FROM #H1
+		  WHERE ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')
+
+		  UNION 
+		  
+		  SELECT  tbl_MC90Day.MC90Day_Order
+				, tbl_MC90Day.MC90Day_StartDate
+				, tbl_MC90Day.MC90Day_EndDate 
+		  FROM tbl_MC90Day
+		  LEFT JOIN tbl_PMHeader ON PMHeader_PM_NUM = MC90Day_Order
+		  WHERE tbl_MC90Day.MC90Day_Order NOT IN (SELECT #H1.Click_Order FROM #H1)
+		  AND ISNULL(PMHeader_PM_MAT,'') NOT IN  ('50N','4AM')) H
+
+--------------------------------------------------------------------------------------------------------------------------
+	
+-- Prepare final output to load	
+
+--------------------------------------------------------------------------------------------------------------------------
+
+	IF OBJECT_ID('tempdb..#Final') IS NOT NULL
+		DROP TABLE #Final
+
+	SELECT * INTO #Final 
+	FROM (SELECT #OrderList.PM
+				,CASE WHEN #WTS.Click_Crew_Individual_Name IS NOT NULL THEN #WTS.Click_Crew_Individual_Name
+					  WHEN #K.CrewName IS NOT NULL THEN #K.CrewName
+					  WHEN S.CrewType IS NOT NULL THEN S.CrewType
+					  ELSE NULL END AS Crew
+				,CASE WHEN #WTS.WTSCrewType IS NOT NULL THEN #WTS.WTSCrewType
+					  WHEN #K.CrewCat IS NOT NULL THEN #K.CrewCat
+					  WHEN S.CrewType IS NOT NULL THEN S.CrewType
+					  
+					  ELSE NULL END AS CrewType
+				,CASE WHEN #WTS.WTS_StDate IS NOT NULL THEN #WTS.WTS_StDate
+					  WHEN #H.MinOfClick_Assignment_StartDate IS NOT NULL THEN #H.MinOfClick_Assignment_StartDate
+					  WHEN S.DateSchedStart IS NOT NULL THEN S.DateSchedStart
+					  ELSE NULL END AS Sched_ST_Date
+				,CASE WHEN #WTS.WTS_EndDate IS NOT NULL THEN #WTS.WTS_EndDate
+					  WHEN #H.MaxOfClick_Assignment_End_Date IS NOT NULL THEN #H.MaxOfClick_Assignment_End_Date
+					  WHEN S.DateSchedEnd IS NOT NULL THEN S.DateSchedEnd
+					  ELSE NULL END AS Sched_End_Date
+	FROM #OrderList
+	LEFT JOIN #WTS ON #WTS.Click_Order = PM
+	LEFT JOIN #K ON #K.PM = #OrderList.PM
+	LEFT JOIN #H ON #H.Click_Order = #OrderList.PM
+	LEFT JOIN (SELECT PM
+					 ,MAX(CrewType) AS CrewType
+					 ,MAX(DateSchedStart) AS DateSchedStart
+					 ,MAX(DateSchedEnd) AS DateSchedEnd
+			   FROM #SCADA
+			   WHERE #SCADA.DateSchedStart IS NOT NULL
+			   AND #SCADA.DateSchedEnd IS NOT NULL
+			   GROUP BY PM) S ON S.PM = #OrderList.PM) FINAL
+
+	--select * from #final
 
 -- =============================================
-	IF OBJECT_ID('tempdb..#LL_PCR') IS NOT NULL
-    DROP TABLE #LL_PCR
-
-	SELECT * 
-	INTO #LL_PCR --this pulls date relatated to a list of PCR's from the Ledger Log that were passed through the Ledger rather than through FCC (e.g. Business Case changes will be captured this way)
-	FROM (
-			SELECT L.LedgerLog_PM
-				  ,L.LedgerLog_PCR
-				  ,L.LedgerLog_NewValue
-				  ,L.LedgerLog_CreateDate
-				  ,L.LedgerLog_CreateUser
-				  ,L.LedgerLog_Description
-			FROM tbl_LedgerLog L
-			INNER JOIN (
-						SELECT LL.LedgerLog_PM
-								,LL.LedgerLog_PCR
-								,MAX(LL.LedgerLog_ID) AS MaxID --grab the ID of the most current version in the Ledger Log
-						FROM tbl_LedgerLog LL
-						WHERE LL.LedgerLog_Category = 'Budget'
-							AND ISNULL(LL.LedgerLog_PCR,'') <> ''
-							AND LL.LedgerLog_PCR NOT IN (SELECT CAST(PCRID AS NVARCHAR(255)) FROM #LastChange) --only grab data where the data doesn't exist in the FCC tables
-							AND ISNUMERIC(LL.LedgerLog_PM) = 1
-						GROUP BY LL.LedgerLog_PM
-								,LL.LedgerLog_PCR
-						) AS LM ON LM.MaxID = L.LedgerLog_ID
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#PCRMaxDt') IS NOT NULL
-    DROP TABLE #PCRMaxDt
-
-	SELECT * 
-	INTO #PCRMaxDt --grabs the last date of the PCR in FCC
-	FROM (
-		  SELECT CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-			  ,PCR.PMNumber
-			  ,MAX(LastStatusChangeDate) AS LastChangeDate
-		  FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
---		  LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequestChangeType') PCR_T ON PCR.PCRID = PCR_T.PCRID
---		  WHERE PCR_T.ChangeTypeID = 2 --Type 2 = Change request involved a financial change --commented out so that all types of PCR's are shown 2019-05-17
-		  GROUP BY PCR.PCRID
-				  ,PMNumber				
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#LastPCR') IS NOT NULL
-    DROP TABLE #LastPCR
-
-	SELECT * 
-	INTO #LastPCR --combines PCR data from FCC with PCR data in the Ledger (which would be Business Case data) and identifies which PCR is the last PCR change.
-	FROM (
-			SELECT All_PCR1.PMNumber
-				  ,All_PCR1.PCRID AS LastPCRID
-			FROM (
-					SELECT PD.PMNumber
-						  ,PD.PCRID
-						  ,PD.LastChangeDate
-					FROM #PCRMaxDt PD
-					UNION ALL
-					SELECT L.LedgerLog_PM
-						  ,L.LedgerLog_PCR
-						  ,L.LedgerLog_CreateDate
-					FROM #LL_PCR L
-				 ) All_PCR1
-			INNER JOIN ( 
-						SELECT All_PCR2.PMNumber
-							  ,MAX(All_PCR2.LastChangeDate) AS LastChangeDate
-						FROM (
-								SELECT PD.PMNumber
-									  ,PD.PCRID
-									  ,PD.LastChangeDate
-								FROM #PCRMaxDt PD
-								UNION ALL
-								SELECT L.LedgerLog_PM
-									  ,L.LedgerLog_PCR
-									  ,L.LedgerLog_CreateDate
-								FROM #LL_PCR L
-								) All_PCR2
-						GROUP BY All_PCR2.PMNumber
-						) A ON A.PMNumber = All_PCR1.PMNumber AND A.LastChangeDate = All_PCR1.LastChangeDate		
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#ApprPCRMaxDt') IS NOT NULL
-    DROP TABLE #ApprPCRMaxDt
-
-	SELECT * 
-	INTO #ApprPCRMaxDt -- for flagging the last Financial Change PCR in FCC
-	FROM (
-			SELECT CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-				  ,PCR.PMNumber
-				  ,MAX(LastStatusChangeDate) AS LastChangeDate
-			FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
-			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequestChangeType') PCR_T ON PCR.PCRID = PCR_T.PCRID
-			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_WorkflowStatus') W ON PCR.WorkflowStatusID = W.WorkflowStatusID
-			WHERE PCR_T.ChangeTypeID = 2 --Type 2 = Change request involved a financial change
-			  AND W.WorkflowStatus = 'Approved'
-			GROUP BY PCR.PCRID
-					,PMNumber				
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#LastApprovedPCR') IS NOT NULL
-    DROP TABLE #LastApprovedPCR
-
-	SELECT * 
-	INTO #LastApprovedPCR --combines the last Fincancial Change in FCC with the last Financial Change in Ledger (which would be a business case change) to flag the overall Last Financial Change.
-	FROM (
-			SELECT All_PCR1.PMNumber
-				  ,All_PCR1.PCRID AS LastApprovedPCRID
-			FROM (
-					SELECT PD.PMNumber
-							,PD.PCRID
-							,PD.LastChangeDate
-					FROM #ApprPCRMaxDt PD
-					UNION ALL
-					SELECT L.LedgerLog_PM
-							,L.LedgerLog_PCR
-							,L.LedgerLog_CreateDate
-					FROM #LL_PCR L
-					) All_PCR1
-			INNER JOIN ( 
-						SELECT All_PCR2.PMNumber
-							  ,MAX(All_PCR2.LastChangeDate) AS LastChangeDate
-						FROM (
-								SELECT PD.PMNumber
-										,PD.PCRID
-										,PD.LastChangeDate
-								FROM #ApprPCRMaxDt PD
-								UNION ALL
-								SELECT L.LedgerLog_PM
-										,L.LedgerLog_PCR
-										,L.LedgerLog_CreateDate
-								FROM #LL_PCR L
-								) All_PCR2
-						GROUP BY All_PCR2.PMNumber
-						) A ON A.PMNumber = All_PCR1.PMNumber AND A.LastChangeDate = All_PCR1.LastChangeDate		
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#PYF_sub') IS NOT NULL
-    DROP TABLE #PYF_sub
-
-	SELECT * 
-	INTO #PYF_sub
-	FROM (
-			SELECT tbl_PMHeader.PMHeader_PM_NUM
-				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-				  ,SUM(tbl_LedgerPlan.LedgerPlan_Budget) AS PriorYrFunding
-			FROM tbl_LedgerPlan
-			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
-						SELECT MAX(L.LedgerPlan_ID) AS ID
-								,L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-						FROM tbl_LedgerPlan L
-						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
-																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
-						GROUP BY L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-
-						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
-			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
-			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
-																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) > TRY_CONVERT(INT,B.LedgerPlan_Year)
-																										   AND PCR.PCRID = B.PCRID
-			GROUP BY tbl_PMHeader.PMHeader_PM_NUM
-					,PCR.PCRID
-		 ) A
-
--- Add in PYF for PCR's that have not yet been approved, and therefor have not yet written data to Ledger
-
-	IF OBJECT_ID('tempdb..#PYF') IS NOT NULL
-    DROP TABLE #PYF
-
-	SELECT * 
-	INTO #PYF
-	FROM (
-			SELECT *
-			FROM #PYF_sub
-
-			UNION ALL
-
-			SELECT PCR.PMNumber AS PMHeader_PM_NUM
-					,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-					,SUM(C.SAPOrderCosts_Amount) AS PriorYrFunding
-			FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
-			INNER JOIN tbl_SAP_AAQ230_OrderCosts C ON C.SAPOrderCosts_PM = PCR.PMNumber AND C.SAPOrderCosts_PostingYear < PCR.CurrentYear
-			LEFT JOIN #PYF_sub ON #PYF_sub.PCRID = PCR.PCRID AND #PYF_sub.PMHeader_PM_NUM = PCR.PMNumber
-			WHERE #PYF_sub.PCRID IS NULL
-			GROUP BY PCR.PMNumber
-					,CAST(PCR.PCRID AS NVARCHAR(255))
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#BYF') IS NOT NULL
-    DROP TABLE #BYF
-
-	SELECT * 
-	INTO #BYF
-	FROM (
-			SELECT tbl_PMHeader.PMHeader_PM_NUM
-				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-				  ,tbl_LedgerPlan.LedgerPlan_Budget AS BudgetYrFunding
-			FROM tbl_LedgerPlan
-			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
-						SELECT MAX(L.LedgerPlan_ID) AS ID
-								,L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-						FROM tbl_LedgerPlan L
-						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
-																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
-						GROUP BY L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-
-						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
-			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
-			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
-																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) = TRY_CONVERT(INT,B.LedgerPlan_Year)
-																										   AND PCR.PCRID = B.PCRID
-		 ) A
-
--- =============================================
-	IF OBJECT_ID('tempdb..#FYF') IS NOT NULL
-    DROP TABLE #FYF
-
-	SELECT * 
-	INTO #FYF
-	FROM (
-			SELECT tbl_PMHeader.PMHeader_PM_NUM
-				  ,CAST(PCR.PCRID AS NVARCHAR(255)) AS PCRID
-				  ,SUM(tbl_LedgerPlan.LedgerPlan_Budget) AS FutureYrFunding
-			FROM tbl_LedgerPlan
-			INNER JOIN ( --this inner join used to be able to grab the Ledger Yearly plan at the time a PCR was submitted.
-						SELECT MAX(L.LedgerPlan_ID) AS ID
-								,L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-						FROM tbl_LedgerPlan L
-						INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = L.LedgerPlan_PM
-																										   AND CAST(PCR.FinalApprovedDate AS DATE) >= CAST(L.LedgerPlan_Entry_dt AS DATE)
-						GROUP BY L.LedgerPlan_PM
-								,L.LedgerPlan_Year
-								,PCR.PCRID
-
-						) B ON B.ID = tbl_LedgerPlan.LedgerPlan_ID
-			INNER JOIN tbl_PMHeader ON tbl_PMHeader.PMHeader_PM_NUM = TRY_CONVERT(int,tbl_LedgerPlan.LedgerPlan_PM)
-			INNER JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR ON PCR.PMNUmber = PMHeader_PM_NUM
-																										   AND TRY_CONVERT(INT,PCR.BudgetScenario) < TRY_CONVERT(INT,B.LedgerPlan_Year)
-																										   AND PCR.PCRID = B.PCRID
-			GROUP BY tbl_PMHeader.PMHeader_PM_NUM
-					,PCR.PCRID
-		 ) A
--- =============================================
-	IF OBJECT_ID('tempdb..#CJCF_PCRRev') IS NOT NULL
-    DROP TABLE #CJCF_PCRRev
-
-	SELECT * 
-	INTO #CJCF_PCRRev
-	FROM (
-		  SELECT C.CJCF_PM
-				,C.CJCF_PCRID
-				,MAX(C.CJCF_RevisionID) AS MaxCJCF_RevisionID
-		  FROM tbl_CJCF C
-		  GROUP BY C.CJCF_PM
-				  ,C.CJCF_PCRID
-		 ) A
-
--- =============================================
--- clear the table data
--- =============================================
-TRUNCATE TABLE tbl_CJCF_PCR
-
--- =============================================
--- INSERT the data into the permanent table
+-- Truncate table
 -- =============================================
 
-INSERT INTO [dbo].[tbl_CJCF_PCR]
-           ([PCRID]
-           ,[PMNumber]
-           ,[WorkflowStatusID]
-           ,[WorkflowStatus]
-           ,[FinalApprovedDate]
-           ,[LastStatusChangeDate]
-           ,[CancelReason]
-           ,[CancelDate]
-           ,[CreatedBy]
-           ,[CreatedDate]
-           ,[UpdatedBy]
-           ,[UpdatedDate]
-           ,[FundingYearToDisplay]
-           ,[JobOwner]
-           ,[DecisionDate]
-           ,[JobEstimateComplete]
-           ,[ConstructionReady]
-           ,[ConstructionStart]
-           ,[ConstructionEnd]
-           ,[ProjectInfo]
-           ,[PriorYrFunding]
-           ,[BudgetYrFunding]
-           ,[FutureYrBudget]
-           ,[TotalFundedAmount]
-           ,[BudgetYrUnitFAC]
-           ,[FutureYrUnitFAC]
-           ,[BudgetYear]
-           ,[RebaselineFlag]
-           ,[PreviousApprover]
-           ,[NextApprover]
-           ,[CurrentYear]
-           ,[RequestedDate]
-           ,[ConstructionManagerApproval]
-           ,[LaborGroup]
-           ,[LaborStartDate]
-           ,[LaborEndDate]
-           ,[CcbRequired]
-           ,[EscalatedWorkflow]
-           ,[LastChangeActivityLogID]
-           ,[LastDateOfAction]
-           ,[LastActor]
-           ,[LastResponder]
-           ,[LastAction]
-           ,[LastComment]
-           ,[LastPCRFlag]
-           ,[LastApprovedBudgetPCRFlag]
-		   ,[LastCJCF_SubmissionID])
+	TRUNCATE TABLE rpt_Schedule_Summary
 
-SELECT CAST(PCR.PCRID AS nvarchar(255)) AS PCRID
-      ,PCR.PMNumber
-      ,PCR.WorkflowStatusID
-	  ,WFS.WorkflowStatus
-      ,TRY_CONVERT(datetime, PCR.FinalApprovedDate) AS FinalApprovedDate
-      ,TRY_CONVERT(datetime, PCR.LastStatusChangeDate) AS LastStatusChangeDate
-      ,PCR.CancelReason
-      ,PCR.CancelDate
-      ,PCR.CreatedBy
-      ,TRY_CONVERT(datetime, PCR.CreatedDate) AS CreatedDate
-      ,PCR.UpdatedBy
-      ,TRY_CONVERT(datetime, PCR.UpdatedDate) AS UpdatedDate
-      ,PCR.FundingYearToDisplay
-      ,PCR.JobOwner --
-      ,TRY_CONVERT(datetime, PCR.DecisionDate) AS DecisionDate
-      ,TRY_CONVERT(datetime, PCR.JobEstimateComplete) AS JobEstimateComplete
-      ,TRY_CONVERT(datetime, PCR.ConstructionReady) AS ConstructionReady
-      ,TRY_CONVERT(datetime, PCR.ConstructionStart) AS ConstructionStart
-      ,TRY_CONVERT(datetime,PCR.ConstructionEnd) AS ConstructionEnd
-      ,PCR.ProjectInfo
-	  ,PYF.PriorYrFunding
-      ,BYF.BudgetYrFunding AS BudgetYrFunding
-      ,FYF.FutureYrFunding AS FutureYrBudget
-	  ,CASE WHEN ISNULL(PCR.FinalApprovedDate,'1900-01-01') = '1900-01-01' THEN ISNULL(PYF.PriorYrFunding,0) + ISNULL(PCR.CurrentYrCostFAC,0) + ISNULL(PCR.FutureYrCostFAC,0) 
-			WHEN PYF.PriorYrFunding IS NULL AND BYF.BudgetYrFunding IS NULL AND FYF.FutureYrFunding IS NULL THEN NULL
-			ELSE ISNULL(PYF.PriorYrFunding,0) + ISNULL(BYF.BudgetYrFunding,0) + ISNULL(FYF.FutureYrFunding,0) 
-	   END AS TotalFundedAmount
-      ,PCR.CurrentYrUnitFAC AS BudgetYrUnitFAC
-      ,PCR.FutureYrUnitFAC
-      ,PCR.BudgetScenario AS BudgetYear
-      ,PCR.RebaselineFlag
-      ,PCR.PreviousApprover
-      ,PCR.NextApprover
-      ,PCR.CurrentYear
-      ,TRY_CONVERT(datetime, PCR.RequestedDate) AS RequestedDate
-      ,PCR.ConstructionManagerApproval
-      ,LTRIM(RTRIM(PCR.LaborGroup)) AS LaborGroup
-      ,TRY_CONVERT(datetime, PCR.LaborStartDate) AS LaborStartDate
-      ,TRY_CONVERT(datetime, PCR.LaborEndDate) AS LaborEndDate
-      ,PCR.CcbRequired
-      ,PCR.EscalatedWorkflow
-	  ,CAL.[ChangeActivityLogID] AS LastChangeActivityLogID
-      ,TRY_CONVERT(datetime, CAL.[DateOfAction]) AS LastDateOfAction
-      ,CAL.[Actor] AS LastActor
-      ,CAL.[Responder] AS LastResponder
-      ,CAL.[Action] AS LastAction
-      ,LTRIM(RTRIM(CAL.[Comment])) AS LastComment
-	  ,IIF(ISNULL(LPCR.LastPCRID, '-1')='-1', 0, 1) AS LastPCRFlag	  
-	  ,IIF(ISNULL(LAPCR.LastApprovedPCRID, '-1')='-1', 0, 1) AS LastApprovedPCRFlag
-	  ,C.MaxCJCF_RevisionID	  
-FROM OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ProjectChangeRequest') PCR
-LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_WorkflowStatus') WFS ON PCR.WorkflowStatusID = WFS.WorkflowStatusID
-LEFT JOIN #LastChange LC ON LC.PCRID = CAST(PCR.PCRID AS NVARCHAR(255))
-LEFT JOIN OPENQUERY(DataGoat,'SELECT * FROM FCC2Dist.dbo.pst_ChangeActivityLog') CAL ON LC.LastChangeActivityLogID = CAL.ChangeActivityLogID
-LEFT JOIN #LastPCR LPCR ON LPCR.LastPCRID = CAST(PCR.PCRID AS nvarchar(255))
-LEFT JOIN #LastApprovedPCR LAPCR ON LAPCR.LastApprovedPCRID = CAST(PCR.PCRID AS nvarchar(255))
-LEFT JOIN #PYF PYF ON PYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
-LEFT JOIN #CJCF_PCRRev C ON C.CJCF_PM = PCR.PMNumber AND TRY_CONVERT(int,C.CJCF_PCRID) = PCR.PCRID
-LEFT JOIN #BYF BYF ON BYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
-LEFT JOIN #FYF FYF ON FYF.PCRID = CAST(PCR.PCRID AS nvarchar(255))
 
-UNION ALL
+-- =============================================
+-- Insert query
+-- =============================================
+	INSERT INTO rpt_Schedule_Summary (	 [Sched_PM]
+										,[Sched_Crew]
+										,[Sched_CrewType]
+										,[Sched_StartDate]
+										,[Sched_EndDate])
+	SELECT PM
+		  ,MAX(Crew) AS Crew
+		  ,MAX(CrewType) AS CrewType
+		  ,MAX(Sched_ST_Date) AS Sched_St_Date
+		  ,MAX(Sched_End_Date) AS Sched_End_Date
+	FROM #Final
+	WHERE PM IS NOT NULL
+	AND (Crew IS NOT NULL
+	     OR CrewType IS NOT NULL
+	     OR Sched_ST_Date IS NOT NULL
+	     OR Sched_End_Date IS NOT NULL)
+	GROUP BY PM
 
-SELECT L.LedgerLog_PCR AS PCRID
-      ,L.LedgerLog_PM AS PMNumber
-      ,NULL AS WorkflowStatusID
-	  ,'APPROVED' AS WorkflowStatus
-      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS FinalApprovedDate
-      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS LastStatusChangeDate
-      ,NULL AS CancelReason
-      ,NULL AS CancelDate
-      ,L.LedgerLog_CreateUser AS CreatedBy
-      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS CreatedDate
-      ,L.LedgerLog_CreateUser AS UpdatedBy
-      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS UpdatedDate
-      ,NULL AS FundingYearToDisplay
-      ,NULL AS JobOwner --
-      ,NULL AS DecisionDate
-      ,NULL AS JobEstimateComplete
-      ,NULL AS ConstructionReady
-      ,NULL AS ConstructionStart
-      ,NULL AS ConstructionEnd
-      ,L.LedgerLog_Description AS ProjectInfo
-	  ,NULL AS PriorYrFunding
-      ,NULL AS BudgetYrFunding
-      ,NULL AS FutureYrBudget
-	  ,TRY_CONVERT(money,L.LedgerLog_NewValue) AS TotalFundedAmount
-      ,NULL AS BudgetYrUnitFAC
-      ,NULL AS FutureYrUnitFAC
-      ,NULL AS BudgetYear
-      ,NULL AS RebaselineFlag
-      ,NULL AS PreviousApprover
-      ,NULL AS NextApprover
-      ,NULL AS CurrentYear
-      ,NULL AS RequestedDate
-      ,NULL AS ConstructionManagerApproval
-      ,NULL AS LaborGroup
-      ,NULL AS LaborStartDate
-      ,NULL AS LaborEndDate
-      ,NULL AS CcbRequired
-      ,NULL AS EscalatedWorkflow
-	  ,NULL AS LastChangeActivityLogID
-      ,TRY_CONVERT(datetime, L.LedgerLog_CreateDate) AS LastDateOfAction
-      ,L.LedgerLog_CreateUser AS LastActor
-      ,NULL AS LastResponder
-      ,NULL AS LastAction
-      ,NULL AS LastComment
-	  ,IIF(ISNULL(LPCR.LastPCRID, '-1')='-1', 0, 1) AS LastPCRFlag	  
-	  ,IIF(ISNULL(LAPCR.LastApprovedPCRID, '-1')='-1', 0, 1) AS LastApprovedPCRFlag
-	  ,C.MaxCJCF_RevisionID
-FROM #LL_PCR L
-LEFT JOIN #LastPCR LPCR ON LPCR.LastPCRID = L.LedgerLog_PCR AND LPCR.PMNumber = L.LedgerLog_PM
-LEFT JOIN #LastApprovedPCR LAPCR ON LAPCR.LastApprovedPCRID = L.LedgerLog_PCR AND LAPCR.PMNumber = L.LedgerLog_PM
-LEFT JOIN #CJCF_PCRRev C ON C.CJCF_PM = L.LedgerLog_PM AND C.CJCF_PCRID = L.LedgerLog_PCR
+-- =============================================
+-- Update Query to take care of M&C 90 Day 
+-- =============================================
+
+	UPDATE rpt_Schedule_Summary
+	SET [Sched_CrewType] = 'M&C'
+	WHERE Sched_Crew = 'M&C - 90 Day Plan'
 
 -- =============================================
 -- Append SAP Audit log with log information
@@ -484,8 +432,30 @@ LEFT JOIN #CJCF_PCRRev C ON C.CJCF_PM = L.LedgerLog_PM AND C.CJCF_PCRID = L.Ledg
 	INSERT INTO DETEP.dbo.tbl_SAP_AuditLog (  SAPAudit_Table
 											, SAPAudit_UpDateDt
 											, SAPAudit_LANID, UpdateDate, ProcedureName)
-	VALUES('update_tbl_CJCF_PCR ver: 07/06/2023'
+	VALUES( 'rpt_Schedule_Summary ver: 04/13/2023'
 		   , CONVERT(decimal(12, 7), GETDATE()) + 2 --convert this date numerical value to Excel Serial Number equivalent.
 		   , UPPER(SYSTEM_USER), getdate(), OBJECT_NAME(@@PROCID))
 
+-- =============================================
+-- Send out notification email
+-- =============================================
+
+	--DECLARE @EmailSubject AS varchar(230);
+ --       set @EmailSubject = 'rpt_Schedule_Summary has been updated'
+
+	--	EXEC msdb.dbo.sp_send_dbmail
+	--	@profile_name = 'DETEP account',
+	--	@recipients=N'CXU8@pge.com',
+	--	@subject =@EmailSubject,
+	--	@exclude_query_output = 1,
+	--	@query_result_header = 1; 
+
+
+
+
+--EXEC [dbo].[update_rpt_Schedule_Summary]
+
+
 END
+
+
