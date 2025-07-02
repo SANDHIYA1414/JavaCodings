@@ -1,9 +1,26 @@
-The remote Windows host is missing security update 5046615. It is, therefore, affected by multiple vulnerabilities
+The Microsoft .NET Framework installation on the remote host is missing a security update. It is, therefore, affected by multiple vulnerabilities, as follows:
 
-  - Windows Kerberos Remote Code Execution Vulnerability (CVE-2024-43639)
+  - Denial of service vulnerability in Microsoft .NET Framework. (CVE-2023-36042, CVE-2024-21312)
 
-  - Windows NT OS Kernel Elevation of Privilege Vulnerability (CVE-2024-43623)
+  - Security feature bypass in System.Data.SqlClient SQL data provider. An attacker can perform a     man-in-the-middle attack on the connection between the client and server in order to read and modify the     TLS traffic. (CVE-2024-0056)
 
-  - Windows Telephony Service Elevation of Privilege Vulnerability (CVE-2024-43626)
+  - Security feature bypass in applications that use the X.509 chain building APIs. When processing an     untrusted certificate with malformed signatures, the framework returns an incorrect reason code.
+    Applications which make use of this reason code may treat this scenario as a successful chain build,     potentially bypassing the application's typical authentication logic. (CVE-2024-0057)
 
-Note that Nessus has not tested for these issues but has instead relied only on the application's self-reported version number.
+
+The Microsoft .NET Framework installation on the remote host is missing a security update. It is, therefore, affected by multiple vulnerabilities, as follows:
+
+  - Security feature bypass in ASP.NET. An attacker can bypass the security checks that prevents an attacker     from accessing internal applications in a website. (CVE-2023-36560)
+
+  - Privilege escalation vulnerability in FTP component of .NET Framework. An attacker can inject arbitrary     commands to the FTP server. (CVE-2023-36049)
+
+  - Information disclosure vulnerability in .NET Framework. An attacker can obtain the ObjRef URI which could     lead to remote code execution. (CVE-2024-29059
+
+
+
+The Microsoft .NET Framework installation on the remote host is missing a security update. It is, therefore, affected by multiple vulnerabilities, as follows:
+
+  - Multiple vulnerabilities in DiaSymReader.dll where parsing an corrupted PDB can result in remote code     execution. (CVE-2023-36792, CVE-2023-36793, CVE-2023-36794 CVE-2023-36796)
+
+  - A vulnerability in the WPF XML parser where an unsandboxed parser can lead to remote code execution.
+    (CVE-2023-36788)
