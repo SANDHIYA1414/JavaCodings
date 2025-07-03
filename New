@@ -1,3 +1,1 @@
-	2024-03 Cumulative Update for Windows 10 Version 1607 for x86-based Systems (KB5035855)	Windows 10, Windows 10 LTSB	Security Updates	3/12/2024	n/a	914.7 MB	
-2024-03 Cumulative Update for Windows 10 Version 1607 for x64-based Systems (KB5035855)	Windows 10, Windows 10 LTSB	Security Updates	3/12/2024	n/a	1627.4 MB	
-2024-03 Cumulative Update for Windows Server 2016 for x64-based Systems (KB5035855)
+The version of Microsoft Power Automate for desktop installed on the remote Windows host is 2.41.x < 2.41.178.24249, 2.42.x < 2.42.331.24249, 2.43.x < 2.43.249.24249, 2.44.x < 2.44.55.24249, 2.45.x < 2.45.404.24249, 2.46.x < 2.46.181.24249, or 2.47.x < 2.47.119.24249. It is, therefore, affected by a remote code execution vulnerability:
