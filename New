@@ -1,16 +1,14 @@
-
- Desc: Path              : C:\Program Files (x86)\dotnet\shared\Microsoft.AspNetCore.App\3.1.1
-  Installed version : 3.1.1
-  Fixed version     : 3.1.32
-
-  Path              : C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.18
-  Installed version : 3.1.18
-  Fixed version     : 3.1.32
-
-  Path              : C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.1
-  Installed version : 3.1.1
-  Fixed version     : 3.1.32
-
-soln:A remote code execution vulnerability exists in ASP.NET core 3.1, ASP.NET 6.0, and ASP.NET 7.0, where a malicious actor could cause a user to run arbitrary code as a result of parsing maliciously crafted xps files.
-
-Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
+Microsoft.AspNetCore.All 2.1.15 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.All]
+Microsoft.AspNetCore.All 2.1.30 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.All]
+Microsoft.AspNetCore.App 2.1.15 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.AspNetCore.App 2.1.30 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.AspNetCore.App 3.1.1 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.AspNetCore.App 3.1.18 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.AspNetCore.App 3.1.32 [C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App]
+Microsoft.NETCore.App 2.1.15 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Microsoft.NETCore.App 2.1.30 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Microsoft.NETCore.App 3.1.1 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Microsoft.NETCore.App 3.1.18 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Microsoft.NETCore.App 3.1.32 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
+Microsoft.WindowsDesktop.App 3.1.1 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
+Microsoft.WindowsDesktop.App 3.1.18 [C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App]
