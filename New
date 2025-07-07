@@ -1,13 +1,16 @@
 
+ Desc: Path              : C:\Program Files (x86)\dotnet\shared\Microsoft.AspNetCore.App\3.1.1
+  Installed version : 3.1.1
+  Fixed version     : 3.1.32
 
- desc: Product           : Access 2016
-  - C:\Program Files\Microsoft Office\root\Office16\MsAccess.exe has not been patched.
-    Remote version    : 16.0.14326.20738
-    Fixed version     : 16.0.17328.20738
+  Path              : C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.18
+  Installed version : 3.1.18
+  Fixed version     : 3.1.32
 
-soln:The Microsoft Access Products are missing a security update. It is, therefore, affected by the following vulnerability:
+  Path              : C:\Program Files\dotnet\shared\Microsoft.AspNetCore.App\3.1.1
+  Installed version : 3.1.1
+  Fixed version     : 3.1.32
 
-  - A remote code execution vulnerability. An attacker can exploit this to bypass authentication and execute     unauthorized arbitrary commands. (CVE-2025-26630)
+soln:A remote code execution vulnerability exists in ASP.NET core 3.1, ASP.NET 6.0, and ASP.NET 7.0, where a malicious actor could cause a user to run arbitrary code as a result of parsing maliciously crafted xps files.
 
 Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
-
