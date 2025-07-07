@@ -1,8 +1,17 @@
 
-  description:Path              : C:\Program Files\Azure Data Studio\
-  Installed version : 1.25.1.0
-  Fixed version     : 1.48.0
 
-solution:The version of Microsoft Azure Data Studio installed on the remote Windows host is prior to 1.48.0. It is, therefore, affected by an unspecified elevation of privilege vulnerability.
+ DescriptionL: Product           : OneNote 2016
+  - C:\Program Files\Microsoft Office\root\Office16\OneNote.exe has not been patched.
+    Remote version    : 16.0.14326.20738
+    Fixed version     : 16.0.17328.20770
 
-Note that Nessus has not tested for these issues but has instead relied only on the application's self-reported version number.
+
+
+  Product           : OneNote 2016
+  - C:\Program Files\Microsoft Office\root\Office16\OneNote.exe has not been patched.
+    Remote version    : 16.0.14326.20738
+    Fixed version     : 16.0.17328.20770
+
+Soln:The Microsoft OneNote Products are missing a security update. It is, therefore, affected by a security feature bypass vulnerability.
+
+Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
