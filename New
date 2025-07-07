@@ -1,18 +1,2 @@
-
-  desc:   
-   Path              : C:\Program Files (x86)\dotnet\shared\Microsoft.NETCore.App\3.1.1\
-  Installed version : 3.1.1
-  Fixed version     : 3.1.28
-
-  Path              : C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.1\
-  Installed version : 3.1.1
-  Fixed version     : 3.1.28
-
-  Path              : C:\Program Files\dotnet\shared\Microsoft.NETCore.App\3.1.18\
-  Installed version : 3.1.18
-  Fixed version     : 3.1.28
-
-Soln:
-A spoofing vulnerability exists in .NET core 6.0 < 6.0.8 and .NET Core 3.1 < 3.1.28. An unauthenticated, remote attacker can exploit this, to perform actions with the privileges of another user.
-
-Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
+desc:The Microsoft .NET Core installation on the remote host is version 2.1.x < 2.1.20 or 3.1.x < 3.1.6. It is, therefore, affected by a remote code execution (RCE) vulnerability due to failing to check the source markup of XML file input. An unauthenticated, remote attacker can exploit this, by issuing specially crafted requests to applications that process certain types of XML, to execute arbitrary code in the context of the current user.
+soln:Refer to vendor documentation.
