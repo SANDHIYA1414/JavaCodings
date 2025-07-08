@@ -1,18 +1,26 @@
 
-Microsoft .NET Framework 4.8
-The remote host is missing one of the following rollup KBs : 
+CREATE TABLE Students (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100),
+    Age INT,
+    Email NVARCHAR(100)
+);
+GO
 
-Cumulative
-  - 5049615
+CREATE PROCEDURE GetAllStudents
+AS
+BEGIN
+    SELECT * FROM Students;
+END
+GO
 
-C:\Windows\Microsoft.NET\Framework\v4.0.30319\mscorlib.dll has not been patched.
-    Remote version : 4.8.4614.0
-    Should be      : 4.8.4775.0
-
-
-Soln:
-The Microsoft .NET Framework installation on the remote host is missing a security update. It is, therefore, affected by multiple denial of service vulnerabilities, as follows:
-
-  - A remote code execution vulnerability. An attacker can     exploit this issue to cause the affected component to     execute unauthorized code. (CVE-2025-21176)
-
-Note that Nessus has relied upon on the application's self-reported version number.
+CREATE PROCEDURE AddStudent
+    @Name NVARCHAR(100),
+    @Age INT,
+    @Email NVARCHAR(100)
+AS
+BEGIN
+    INSERT INTO Students (Name, Age, Email)
+    VALUES (@Name, @Age, @Email);
+END
+GO
