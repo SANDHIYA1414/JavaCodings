@@ -1,46 +1,58 @@
 
-using System.Data;
+using Microsoft.AspNetCore.Mvc;
+using StudentApiWithAdo.Models;
+using StudentApiWithAdo.Helpers;
 using System.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 
-namespace StudentApiWithAdo.Helpers
+namespace StudentApiWithAdo.Controllers
 {
-    public class SqlHelper
+    [Route("api/[controller]")]
+    [ApiController]
+    public class StudentsController : ControllerBase
     {
-        private readonly string _connectionString;
+        private readonly SqlHelper _sqlHelper;
 
-        public SqlHelper(IConfiguration configuration)
+        public StudentsController(SqlHelper sqlHelper)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _sqlHelper = sqlHelper;
         }
 
-        public DataTable ExecuteStoredProc(string procName, SqlParameter[] parameters = null)
+        [HttpGet]
+        public IActionResult Get()
         {
-            using SqlConnection conn = new(_connectionString);
-            using SqlCommand cmd = new(procName, conn)
+            var dt = _sqlHelper.ExecuteStoredProc("GetAllStudents");
+            var students = new List<Student>();
+
+            foreach (System.Data.DataRow row in dt.Rows)
             {
-                CommandType = CommandType.StoredProcedure
-            };
+                students.Add(new Student
+                {
+                    Id = Convert.ToInt32(row["Id"]),
+                    Name = row["Name"].ToString(),
+                    Age = Convert.ToInt32(row["Age"]),
+                    Email = row["Email"].ToString()
+                });
+            }
 
-            if (parameters != null)
-                cmd.Parameters.AddRange(parameters);
-
-            using SqlDataAdapter adapter = new(cmd);
-            DataTable dt = new();
-            adapter.Fill(dt);
-            return dt;
+            return Ok(students);
         }
 
-        public int ExecuteNonQuery(string procName, SqlParameter[] parameters)
+        [HttpPost]
+        public IActionResult Post([FromBody] Student student)
         {
-            using SqlConnection conn = new(_connectionString);
-            using SqlCommand cmd = new(procName, conn)
+            var parameters = new SqlParameter[]
             {
-                CommandType = CommandType.StoredProcedure
+                new SqlParameter("@Name", student.Name),
+                new SqlParameter("@Age", student.Age),
+                new SqlParameter("@Email", student.Email)
             };
-            cmd.Parameters.AddRange(parameters);
-            conn.Open();
-            return cmd.ExecuteNonQuery();
+
+            int rowsAffected = _sqlHelper.ExecuteNonQuery("AddStudent", parameters);
+
+            if (rowsAffected > 0)
+                return Ok("Student added successfully.");
+            else
+                return BadRequest("Failed to add student.");
         }
     }
 }
