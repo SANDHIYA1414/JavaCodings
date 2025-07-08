@@ -1,58 +1,12 @@
-
-using Microsoft.AspNetCore.Mvc;
-using StudentApiWithAdo.Models;
-using StudentApiWithAdo.Helpers;
-using System.Data.SqlClient;
-
-namespace StudentApiWithAdo.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class StudentsController : ControllerBase
-    {
-        private readonly SqlHelper _sqlHelper;
-
-        public StudentsController(SqlHelper sqlHelper)
-        {
-            _sqlHelper = sqlHelper;
-        }
-
-        [HttpGet]
-        public IActionResult Get()
-        {
-            var dt = _sqlHelper.ExecuteStoredProc("GetAllStudents");
-            var students = new List<Student>();
-
-            foreach (System.Data.DataRow row in dt.Rows)
-            {
-                students.Add(new Student
-                {
-                    Id = Convert.ToInt32(row["Id"]),
-                    Name = row["Name"].ToString(),
-                    Age = Convert.ToInt32(row["Age"]),
-                    Email = row["Email"].ToString()
-                });
-            }
-
-            return Ok(students);
-        }
-
-        [HttpPost]
-        public IActionResult Post([FromBody] Student student)
-        {
-            var parameters = new SqlParameter[]
-            {
-                new SqlParameter("@Name", student.Name),
-                new SqlParameter("@Age", student.Age),
-                new SqlParameter("@Email", student.Email)
-            };
-
-            int rowsAffected = _sqlHelper.ExecuteNonQuery("AddStudent", parameters);
-
-            if (rowsAffected > 0)
-                return Ok("Student added successfully.");
-            else
-                return BadRequest("Failed to add student.");
-        }
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=Dvitinfdbswx051;Database=Archived;Trusted_Connection=True";
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
     }
+  },
+  "AllowedHosts": "*"
 }
