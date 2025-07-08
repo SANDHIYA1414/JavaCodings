@@ -1,26 +1,11 @@
 
-CREATE TABLE Students (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    Name NVARCHAR(100),
-    Age INT,
-    Email NVARCHAR(100)
-);
-GO
-
-CREATE PROCEDURE GetAllStudents
-AS
-BEGIN
-    SELECT * FROM Students;
-END
-GO
-
-CREATE PROCEDURE AddStudent
-    @Name NVARCHAR(100),
-    @Age INT,
-    @Email NVARCHAR(100)
-AS
-BEGIN
-    INSERT INTO Students (Name, Age, Email)
-    VALUES (@Name, @Age, @Email);
-END
-GO
+namespace StudentApiWithAdo.Models
+{
+    public class Student
+    {
+        public int Id { get; set; }        // Only used in GET
+        public string Name { get; set; }
+        public int Age { get; set; }
+        public string Email { get; set; }
+    }
+}
