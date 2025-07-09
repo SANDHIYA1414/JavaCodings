@@ -1,16 +1,29 @@
-1.Heading :AMQP Cleartext Authentication
-Secription :The remote Advanced Message Queuing Protocol (AMQP) service supports one or more authentication mechanisms that allow credentials to be sent in the clear.	
+1.RabbitMQ < 3.13.8 (GHSA-gh3x-4x42-fvq8)
+Secription :RabbitMQ is a messaging and streaming broker. In versions 3.13.7 and prior, RabbitMQ is logging authorization headers   in plaintext encoded in base64. When querying RabbitMQ api with HTTP/s with basic authentication it creates logs with   all headers in request, including authorization headers which show base64 encoded username:password. This is easy to   decode and afterwards could be used to obtain control to the system depending on credentials. This issue has been   patched in version 4.0.8.
 
-Solution :Disable cleartext authentication mechanisms in the AMQP configuration.
+Note that Nessus has not tested for these issues but has instead relied only on the application's self-reported version number.
+Solution :Upgrade to RabbitMQ version 3.13.8 or later.
 
-2.Erlang/OTP 17.0 < 26.2.5.13 / 27.0 < 27.3.4.1 / 28.0 < 28.0.1 Path Traversal (CVE-2025-4748)
-Description :"The version of Erlang/OTP installed on the remote host is 17.0 prior to 26.2.5.13, 27.0 prior to 27.3.4.1, or 28.0 prior to 28.0.1. It is, therefore, affected by an path traversal vulnerability:
+2.Jenkins LTS < 2.492.2 / Jenkins weekly < 2.500 Multiple Vulnerabilities
+Description :
+  Product           : Jenkins Open Source LTS
+  Path              : D:\Program Files\Jenkins\jenkins.exe
+  Installed version : 2.462.3
+  Fixed version     : 2.492.2
+According to its its self-reported version number, the version of Jenkins running on the remote web server is Jenkins LTS prior to 2.492.2 or Jenkins weekly prior to 2.500. It is, therefore, affected by multiple vulnerabilities:
 
-  - Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability in Erlang OTP     (stdlib modules) allows Absolute Path Traversal, File Manipulation. This vulnerability is associated with     program files lib/stdlib/src/zip.erl and program routines zip:unzip/1, zip:unzip/2, zip:extract/1,     zip:extract/2 unless the memory option is passed. This issue affects OTP from OTP 17.0 until OTP 28.0.1,     OTP 27.3.4.1 and OTP 26.2.5.13, corresponding to stdlib from 2.0 until 7.0.1, 6.2.2.1 and 5.2.3.4.     (CVE-2025-4748)
+  - Medium Jenkins 2.499 and earlier, LTS 2.492.1 and earlier does not require POST requests for the HTTP     endpoint toggling collapsed/expanded status of sidepanel widgets (e.g., Build Queue and Build Executor     Status widgets), resulting in a cross-site request forgery (CSRF) vulnerability. This vulnerability allows     attackers to have users toggle their collapsed/expanded status of sidepanel widgets. Additionally, as the     API accepts any string as the identifier of the panel ID to be toggled, attacker-controlled content can be     stored in the victim's user profile in Jenkins. Jenkins 2.500, LTS 2.492.2 requires POST requests for the     affected HTTP endpoint. (CVE-2025-27624)
 
-Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number."	
+  - Medium Jenkins 2.499 and earlier, LTS 2.492.1 and earlier does not redact encrypted values of secrets when     accessing config.xml of agents via REST API or CLI. This allows attackers with Agent/Extended Read     permission to view encrypted values of secrets. This issue is related to SECURITY-266 in the 2016-05-11     security advisory. Jenkins 2.500, LTS 2.492.2 redacts the encrypted values of secrets stored in agent     config.xml accessed via REST API or CLI for users lacking Agent/Configure permission. (CVE-2025-27622)
 
-solution:Upgrade to Erlang/OTP version 26.2.5.13, 27.3.4.1, or 28.0.1 or later.
+  - Medium Jenkins 2.499 and earlier, LTS 2.492.1 and earlier does not redact encrypted values of secrets when     accessing config.xml of views via REST API or CLI. This allows attackers with View/Read permission to view     encrypted values of secrets. This issue is related to SECURITY-266 in the 2016-05-11 security advisory.
+    Jenkins 2.500, LTS 2.492.2 redacts the encrypted values of secrets stored in view config.xml accessed via     REST API or CLI for users lacking View/Configure permission. (CVE-2025-27623)
+
+  - Medium Various features in Jenkins redirect users to partially user-controlled URLs inside Jenkins. To     prevent open redirect vulnerabilities, Jenkins limits redirections to safe URLs (neither absolute nor     scheme-relative/network-path reference). In Jenkins 2.499 and earlier, LTS 2.492.1 and earlier, redirects     starting with backslash (\) characters are considered safe. This allows attackers to perform phishing     attacks by having users go to a Jenkins URL that will forward them to a different site, because browsers     interpret these characters as part of scheme-relative redirects. Jenkins 2.500, LTS 2.492.2 considers     redirects to URLs starting with backslash (\) characters to be unsafe, rejecting such redirects.
+    (CVE-2025-27625)
+
+Note that Nessus has not tested for these issues but has instead relied only on the application's self-reported version number.
+solution:  Upgrade Jenkins weekly to version 2.500 or later, or Jenkins LTS to version 2.492.2 or later.
 
 
 
