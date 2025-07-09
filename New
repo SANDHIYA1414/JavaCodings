@@ -1,1 +1,1 @@
-f& "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\devenv.exe" /?
+Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Microsoft\DevDiv\vs\Servicing\16.0" | Select-Object -Property SP, Install, InstallDir
