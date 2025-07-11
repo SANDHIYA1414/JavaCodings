@@ -1,1 +1,11 @@
 
+Python Information Disclosure (CVE-2021-3426)
+Description :The version of Python installed on the remote Windows host is potentially affected by an information disclosure vulnerability due to an issue in Python 3's pydoc. An authenticated local or adjacent attacker can exploit this, by convincing another local or adjacent user to start a pydoc server could access the server and use it to disclose sensitive information belonging to the other user that they would not normally be able to access.
+
+Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
+
+Solution :Upgrade to Python 3.7.11, 3.8.9, 3.9.3, 3.10.0a7, or later.
+
+Node.js 20.x < 20.19.2 / 22.x < 22.15.1 / 22.x < 22.15.1 / 23.x < 23.11.1 / 24.x < 24.0.2 Multiple Vulnerabilities (Wednesday, May 14, 2025 Security Releases).
+Description :The version of Node.js installed on the remote host is prior to 20.19.2, 22.15.1, 22.15.1, 23.11.1, 24.0.2. It is, therefore, affected by multiple vulnerabilities as referenced in the Wednesday, May 14, 2025 Security Releases advisory.
+Solution:Upgrade to Node.js version 20.19.2 / 22.15.1 / 22.15.1 / 23.11.1 / 24.0.2 or later.
