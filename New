@@ -1,2 +1,19 @@
-Description:A remote code execution vulnerability exists in .NET Core 3.1, .NET 6.0, and .NET 7.0, where a malicious actor could cause a user to run arbitrary code as a result of parsing maliciously crafted xps files.
-Solution:Update .NET Core Runtime to version 3.1.32 or 6.0.12 or 7.0.1.
+2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-07-21 04:38:41 10.31.206.101 GET /frmReportSelect.aspx fromSite=true 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmPersonalBids.aspx?iUnionExempt=200&iEmpBidCount=179 200 0 0 62
+2025-07-21 04:38:41 10.31.206.101 GET /scripts/jquery-1.9.1.min.js - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 15
+2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 3
+2025-07-21 04:38:41 10.31.206.101 GET /favicon.ico - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 404 0 2 2
+2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-07-21 04:38:46 10.31.206.101 GET /Default.aspx - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 256
+2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
+2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 207-21 04:38:41 10.31.206.101 GET /frmReportSelect.aspx fromSite=true 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmPersonalBids.aspx?iUnionExempt=200&iEmpBidCount=179 200 0 0 62
+2025-07-21 04:38:41 10.31.206.101 GET /scripts/jquery-1.9.1.min.js - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 15
+2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 3
+2025-07-21 04:38:41 10.31.206.101 GET /favicon.ico - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 404 0 2 2
+2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-07-21 04:38:46 10.31.206.101 GET /Default.aspx - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 256
+2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
+2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
+2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
