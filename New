@@ -1,19 +1,2 @@
-2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-07-21 04:38:41 10.31.206.101 GET /frmReportSelect.aspx fromSite=true 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmPersonalBids.aspx?iUnionExempt=200&iEmpBidCount=179 200 0 0 62
-2025-07-21 04:38:41 10.31.206.101 GET /scripts/jquery-1.9.1.min.js - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 15
-2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 3
-2025-07-21 04:38:41 10.31.206.101 GET /favicon.ico - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 404 0 2 2
-2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-07-21 04:38:46 10.31.206.101 GET /Default.aspx - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 256
-2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
-2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 207-21 04:38:41 10.31.206.101 GET /frmReportSelect.aspx fromSite=true 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmPersonalBids.aspx?iUnionExempt=200&iEmpBidCount=179 200 0 0 62
-2025-07-21 04:38:41 10.31.206.101 GET /scripts/jquery-1.9.1.min.js - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 15
-2025-07-21 04:38:41 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 3
-2025-07-21 04:38:41 10.31.206.101 GET /favicon.ico - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 404 0 2 2
-2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-07-21 04:38:46 10.31.206.101 GET /Default.aspx - 81 PGE\T5W5 172.24.46.201 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64)+AppleWebKit/537.36+(KHTML,+like+Gecko)+Chrome/138.0.0.0+Safari/537.36+Edg/138.0.0.0 https://unionbids.utility.pge.com/frmReportSelect.aspx?fromSite=true 200 0 0 256
-2025-07-21 04:38:46 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
-2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.21 - - 401 2 5 1
-2025-07-21 04:38:51 10.31.206.101 GET / - 81 - 172.24.46.22 - - 401 2 5 2
+Description::The version of Python installed on the remote Windows host is potentially affected by an information disclosure vulnerability due to an issue in Python 3's pydoc. An authenticated local or adjacen attacker can exploit this, by convincing another local or adjacent user to start a pydoc server could access the server and use it to disclose sensitive information belonging to the other user that they would not normally be able to access.
+Solution:Upgrade to Python 3.7.11, 3.8.9, 3.9.3, 3.10.0a7, or later.
