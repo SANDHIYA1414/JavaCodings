@@ -1,24 +1,26 @@
-Plugin name :AMQP Cleartext Authentication
-Description:The remote Advanced Message Queuing Protocol (AMQP) service supports one or more authentication mechanisms that allow credentials to be sent in the clear.
-Solution: Disable cleartext authentication mechanisms in the AMQP configuration.
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
+using System;
 
+namespace YourProjectNamespace.Filters
+{
+    public class CustomLogFilter : IActionFilter
+    {
+        private readonly ILogger<CustomLogFilter> _logger;
 
+        public CustomLogFilter(ILogger<CustomLogFilter> logger)
+        {
+            _logger = logger;
+        }
 
-Plugin name :Erlang/OTP 17.0 < 26.2.5.13 / 27.0 < 27.3.4.1 / 28.0 < 28.0.1 Path Traversal (CVE-2025-4748)
-Description:The version of Erlang/OTP installed on the remote host is 17.0 prior to 26.2.5.13, 27.0 prior to 27.3.4.1, or 28.0 prior to 28.0.1. It is, therefore, affected by an path traversal vulnerability:
+        public void OnActionExecuting(ActionExecutingContext context)
+        {
+            _logger.LogInformation($"[Before] Executing: {context.ActionDescriptor.DisplayName} at {DateTime.Now}");
+        }
 
-  - Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') vulnerability in Erlang OTP     (stdlib modules) allows Absolute Path Traversal, File Manipulation. This vulnerability is associated with     program files lib/stdlib/src/zip.erl and program routines zip:unzip/1, zip:unzip/2, zip:extract/1,     zip:extract/2 unless the memory option is passed. This issue affects OTP from OTP 17.0 until OTP 28.0.1,     OTP 27.3.4.1 and OTP 26.2.5.13, corresponding to stdlib from 2.0 until 7.0.1, 6.2.2.1 and 5.2.3.4.     (CVE-2025-4748)
-
-Note that Nessus has not tested for this issue but has instead relied only on the application's self-reported version number.
-Solution: Upgrade to Erlang/OTP version 26.2.5.13, 27.3.4.1, or 28.0.1 or later.
-
-
-Pudin name:RabbitMQ < 3.13.8 (GHSA-gh3x-4x42-fvq8)
-Description:RabbitMQ is a messaging and streaming broker. In versions 3.13.7 and prior, RabbitMQ is logging authorization headers   in plaintext encoded in base64. When querying RabbitMQ api with HTTP/s with basic authentication it creates logs with   all headers in request, including authorization headers which show base64 encoded username:password. This is easy to   decode and afterwards could be used to obtain control to the system depending on credentials. This issue has been   patched in version 4.0.8.
-
-Note that Nessus has not tested for these issues but has instead relied only on the application's self-reported version number.
-solution:Upgrade to RabbitMQ version 3.13.8 or later.
-
-plugin:Jenkins LTS < 2.492.2 / Jenkins weekly < 2.500 Multiple Vulnerabilities
-Description:According to its its self-reported version number, the version of Jenkins running on the remote web server is Jenkins LTS prior to 2.492.2 or Jenkins weekly prior to 2.500. It is, therefore, affected by multiple vulnerabilities:
-SolutionL:Upgrade Jenkins weekly to version 2.500 or later, or Jenkins LTS to version 2.492.2 or later.
+        public void OnActionExecuted(ActionExecutedContext context)
+        {
+            _logger.LogInformation($"[After] Executed: {context.ActionDescriptor.DisplayName} at {DateTime.Now}");
+        }
+    }
+}
