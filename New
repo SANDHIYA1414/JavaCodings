@@ -1,26 +1,36 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using System;
 
 namespace YourProjectNamespace.Filters
 {
-    public class CustomLogFilter : IActionFilter
+    public class GlobalExceptionFilter : IExceptionFilter
     {
-        private readonly ILogger<CustomLogFilter> _logger;
+        private readonly ILogger<GlobalExceptionFilter> _logger;
 
-        public CustomLogFilter(ILogger<CustomLogFilter> logger)
+        public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)
         {
             _logger = logger;
         }
 
-        public void OnActionExecuting(ActionExecutingContext context)
+        public void OnException(ExceptionContext context)
         {
-            _logger.LogInformation($"[Before] Executing: {context.ActionDescriptor.DisplayName} at {DateTime.Now}");
-        }
+            // 1. Log the exception
+            _logger.LogError(context.Exception, "An unhandled exception occurred.");
 
-        public void OnActionExecuted(ActionExecutedContext context)
-        {
-            _logger.LogInformation($"[After] Executed: {context.ActionDescriptor.DisplayName} at {DateTime.Now}");
+            // 2. Create a custom error response
+            var result = new ObjectResult(new
+            {
+                Message = "Something went wrong. Please try again later.",
+                Error = context.Exception.Message   // Optional: Don't expose in production
+            });
+
+            result.StatusCode = 500; // Internal Server Error
+            context.Result = result;
+
+            // 3. Mark the exception as handled
+            context.ExceptionHandled = true;
         }
     }
 }
