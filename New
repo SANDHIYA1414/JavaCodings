@@ -1,36 +1,23 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Logging;
-using System;
-
-namespace YourProjectNamespace.Filters
-{
-    public class GlobalExceptionFilter : IExceptionFilter
-    {
-        private readonly ILogger<GlobalExceptionFilter> _logger;
-
-        public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)
-        {
-            _logger = logger;
-        }
-
-        public void OnException(ExceptionContext context)
-        {
-            // 1. Log the exception
-            _logger.LogError(context.Exception, "An unhandled exception occurred.");
-
-            // 2. Create a custom error response
-            var result = new ObjectResult(new
-            {
-                Message = "Something went wrong. Please try again later.",
-                Error = context.Exception.Message   // Optional: Don't expose in production
-            });
-
-            result.StatusCode = 500; // Internal Server Error
-            context.Result = result;
-
-            // 3. Mark the exception as handled
-            context.ExceptionHandled = true;
-        }
+"Serilog": {
+  "Using": [ "Serilog.Sinks.File" ],
+  "MinimumLevel": {
+    "Default": "Information",
+    "Override": {
+      "Microsoft": "Warning",
+      "System": "Warning"
     }
+  },
+  "WriteTo": [
+    {
+      "Name": "File",
+      "Args": {
+        "path": "Logs/log.txt",
+        "rollingInterval": "Day"
+      }
+    }
+  ],
+  "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ],
+  "Properties": {
+    "Application": "StudentWebAPI"
+  }
 }
