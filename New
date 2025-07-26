@@ -1,23 +1,15 @@
-"Serilog": {
-  "Using": [ "Serilog.Sinks.File" ],
-  "MinimumLevel": {
-    "Default": "Information",
-    "Override": {
-      "Microsoft": "Warning",
-      "System": "Warning"
-    }
-  },
-  "WriteTo": [
-    {
-      "Name": "File",
-      "Args": {
-        "path": "Logs/log.txt",
-        "rollingInterval": "Day"
-      }
-    }
-  ],
-  "Enrich": [ "FromLogContext", "WithMachineName", "WithThreadId" ],
-  "Properties": {
-    "Application": "StudentWebAPI"
-  }
-}
+// 1. Read config from appsettings.json
+var builder = WebApplication.CreateBuilder(args);
+
+// 2. Add Serilog early
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console() // still show in terminal
+    .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Host.UseSerilog();  // 👈 Add this
+
+// Continue as normal
+builder.Services.AddControllers();
