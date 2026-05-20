@@ -1,0 +1,30 @@
+Important:
+
+Do NOT explain only theoretically.
+
+For every IIS concept and deployment step, show actual IIS Manager screenshots or realistic visual mockups step-by-step exactly like a developer sees in real enterprise projects.
+
+I want image-based practical learning.
+
+For example:
+- Show how IIS Manager looks after opening
+- Show where “Sites” appears
+- Show right-click → Add Website
+- Show where Physical Path is entered
+- Show where Port is configured
+- Show Application Pool selection screen
+- Show inetpub folder structure
+- Show publish folder from Visual Studio
+- Show how localhost URL and server URL differ
+- Show bindings configuration screen
+- Show firewall inbound rule screen for port access
+- Show how app pool restart looks
+- Show common IIS errors visually
+
+For every topic:
+1. First show image/screenshot
+2. Then explain what each section means
+3. Then explain practical developer usage
+4. Then explain interview answer
+
+I want beginner-friendly visual explanation with enterprise-style real deployment examples.
