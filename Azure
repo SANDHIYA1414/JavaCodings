@@ -1,0 +1,26 @@
+Create a beginner-friendly visual flow diagram for Azure DevOps pipeline process after a Pull Request (PR) is raised in a .NET project.
+
+The image should show:
+
+1. Developer raises Pull Request
+2. Reviewer checks code
+3. PR gets approved and merged
+4. Pipeline gets automatically triggered
+5. Build process starts
+6. Application compilation happens
+7. Tests run
+8. Deployment stages appear
+
+The diagram should look like real Azure DevOps screens with:
+- Repos
+- Pull Requests
+- Pipelines
+- Runs
+- Stages
+- Branch names
+
+Use arrows between each step.
+Add small explanations below each step in simple words for beginners.
+Use a clean professional UI style similar to Azure DevOps dashboard.
+Focus on explaining:
+“What happens after PR merge?”
